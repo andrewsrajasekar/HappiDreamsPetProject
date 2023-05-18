@@ -1,0 +1,11 @@
+{
+  "dependencies": {
+    "@emotion/react": "^11.10.8",
+    "@emotion/styled": "^11.10.8",
+    "@heroicons/react": "^2.0.17",
+    "@material-tailwind/react": "^1.4.2",
+    "@mui/material": "^5.12.3",
+    "@mui/styled-engine-sc": "^5.12.0",
+    "styled-components": "^5.3.10"
+  }
+}

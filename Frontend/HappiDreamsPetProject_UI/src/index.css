@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.placeholderBgColor{
+    background-color: rgb(204 204 204);
+}
+
+.loginMargin{
+    margin-top: 0rem;
+    margin-bottom: 0rem;
+    margin-left: 40rem;
+    margin-right: 40rem;
+}
+
+.changePasswordMargin{
+  margin-top: 0rem;
+  margin-bottom: 0rem;
+  margin-left: 40rem;
+  margin-right: 35rem;
+}
+
+#cart-container:hover > svg,
+#cart-container:hover > span {
+  color: #4FD1C5;
+}
+
+.cart-list-container {
+  height: 600px;
+  overflow-y: scroll;
+}
+/* Set the main container to flex column layout */
+.accountsPageParentDiv {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure the sidebar container shrinks and doesn't push the footer */
+.accountsPageChildDiv{
+  flex-shrink: 0;
+}
+
+.carousel-container .thumbs-wrapper {
+  display: none;
+}
