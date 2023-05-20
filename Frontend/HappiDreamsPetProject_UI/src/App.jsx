@@ -23,6 +23,7 @@ import { ToastContainer  } from 'react-toastify';
 import AccountsPage from './pages/AccountsPage.jsx';
 import MainPageCarousel from './components/MainPageCarousel.jsx';
 import OrderHistoryPage from './pages/OrderHistoryPage.jsx';
+import OrderSummary from './pages/OrdersSummary.jsx';
 
 function App() {
   window.onbeforeunload = function () {
@@ -191,6 +192,12 @@ function App() {
           path="/orderhistory"
           element={
             <OrderHistoryPage />
+          }
+          />
+          <Route
+          path="/orderhistory/:order_number"
+          element={
+            <OrderSummary />
           }
           />
         </Routes>

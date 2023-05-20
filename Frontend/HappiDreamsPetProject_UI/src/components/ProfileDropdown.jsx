@@ -10,10 +10,6 @@ function ProfileDropdown(){
     const isMobileView = () => {
         return window.innerWidth < 1024;
       }
-      const goToAccountsPage = () => {
-        navigate("/accounts");
-      }
-
       
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -32,6 +28,14 @@ function ProfileDropdown(){
     const goToCartPage = () => {
         navigate("/cart");
       }
+
+    const goToAccountsPage = () => {
+      navigate("/accounts");
+    }
+
+    const goToOrderHistory = () => {
+      navigate("/orderhistory");
+    }
     
 
     return (
@@ -56,7 +60,7 @@ function ProfileDropdown(){
                       </span>
                     </li>
                     <li className="font-medium"> 
-                      <span className="cursor-pointer flex items-center transform transition-colors duration-200 border-r-4 border-transparent hover:border-indigo-700 hover:bg-gray-100">
+                      <span onClick={goToOrderHistory} className="cursor-pointer flex items-center transform transition-colors duration-200 border-r-4 border-transparent hover:border-indigo-700 hover:bg-gray-100">
                       <div className='mr-3'>
                       <TruckIcon className="w-6 h-6" />
                       </div>
