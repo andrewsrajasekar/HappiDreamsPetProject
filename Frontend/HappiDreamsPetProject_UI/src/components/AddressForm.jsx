@@ -71,7 +71,7 @@ const AddressForm = ({ onSave }) => {
         //   }
         // });
         // const data = await response.json();
-        const data = [{"city_name" : "Chennai"}];
+        const data = [{"city_name" : "Chennai"},{"city_name" : "Madurai"}];
         setCities(data.map((city) => ({ label: city.city_name, value: city.city_name })));
         setIsCityLoading(false);
       } else {
@@ -129,7 +129,15 @@ const AddressForm = ({ onSave }) => {
       ...provided,
       maxHeight: "150px",
       overflow: "hidden",
-    })
+    }),
+    control: (provided, state) => ({
+      ...provided,
+      cursor: 'pointer'
+    }),
+    option: (provided, state) => ({
+        ...provided,
+        cursor: 'pointer'
+      })
   };
 
   return (
@@ -152,21 +160,21 @@ const AddressForm = ({ onSave }) => {
           Country
         </label>
         <Select options={countries}  isLoading={isCountryLoading}
-      placeholder={isCountryLoading ? 'Loading Countries...' : 'Select an option'} onChange={handleCountryChange} value={countries.find((c) => c.value === country)} />
+      placeholder={isCountryLoading ? 'Loading Countries...' : 'Select an option'} onChange={handleCountryChange}  getOptionValue={(option) => option.label} value={countries.find((c) => c.value === country)} />
       </div>
       <div className="mb-4">
       <label className="block text-gray-700 font-bold mb-2" htmlFor="state">
           State
         </label>
         <Select options={states}  isLoading={isStateLoading}
-      placeholder={isStateLoading ? 'Loading States...' : 'Select an option'} onChange={handleStateChange}styles={customStyles} value={states.find((s) => s.value === state)} />
+      placeholder={isStateLoading ? 'Loading States...' : 'Select an option'} onChange={handleStateChange}  getOptionValue={(option) => option.label} styles={customStyles} value={states.find((s) => s.value === state)} />
       </div>
       <div className="mb-4">
       <label className="block text-gray-700 font-bold mb-2" htmlFor="city">
           City
         </label>
         <Select options={cities}  isLoading={isCityLoading}
-      placeholder={isCityLoading ? 'Loading Cities...' : 'Select an option'} onChange={handleCityChange}styles={customStyles} value={cities.find((s) => s.value === city)} />
+      placeholder={isCityLoading ? 'Loading Cities...' : 'Select an option'} onChange={handleCityChange}  getOptionValue={(option) => option.label} styles={customStyles} value={cities.find((s) => s.value === city)} />
       </div>
       <div className="mb-4">
         <label className="block text-gray-700 font-bold mb-2" htmlFor="zipCode">

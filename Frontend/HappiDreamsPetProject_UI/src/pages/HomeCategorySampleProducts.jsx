@@ -10,7 +10,7 @@ import '@splidejs/react-splide/css/core';
 import { useEffect, useState } from 'react';
 
 
-function HomeCategorySampleProducts({categorySampleProducts}){
+function HomeCategorySampleProducts({categorySampleProducts, showManipulateButtons, handleDeleteSection, handleEditSection}){
   const [currentCategorySampleProduct, setCurrentCategorySampleProduct] = useState(categorySampleProducts[0]);
   const [currentCategorySampleProductIndex, setCurrentCategorySampleProductIndex] = useState(0);
 
@@ -46,7 +46,7 @@ useEffect(() => {
 }, [currentCategorySampleProductIndex]);
 
 const onNextCategoryClick = () => {
-  if(currentCategorySampleProductIndex <  (currentCategorySampleProductSize - 1)){
+  if(currentCategorySampleProductIndex <  (categorySampleProductsSize - 1)){
     setCurrentCategorySampleProductIndex(currentCategorySampleProductIndex + 1);
   }
 }
@@ -67,7 +67,13 @@ return(
       <div className="flex flex-row justify-center items-center py-6 mb-10">
         <button disabled={currentCategorySampleProductIndex <= 0} className={`relative transition-all ease-in-out duration-300 w-10 h-10 bg-[#5A5CC9] text-white opacity-100 ${ ( currentCategorySampleProductIndex <= 0 ) ? "opacity-50 cursor-not-allowed" : ""}`} onClick={onPrevCategoryClick}><i className="bx bx-chevron-left text-2xl"></i></button>
         <span className="text-gray-900 font-medium title-font text-2xl mx-2.5">{currentCategorySampleProduct["animalType"]} - {currentCategorySampleProduct["categoryName"]}</span>
-        <button disabled={currentCategorySampleProductIndex >= (currentCategorySampleProductSize - 1)} className={`relative transition-all ease-in-out duration-300 w-10 h-10 bg-[#5A5CC9] text-white opacity-100 ${ ( currentCategorySampleProductIndex >= (currentCategorySampleProductSize - 1) ) ? "opacity-50 cursor-not-allowed" : ""}`} onClick={onNextCategoryClick}><i className="bx bx-chevron-right text-2xl"></i></button>
+        {showManipulateButtons !== undefined && showManipulateButtons && 
+          <div>
+            <span className='text-purple-600 cursor-pointer underline mr-2' onClick={() => {handleEditSection(currentCategorySampleProduct.products, currentCategorySampleProduct.animalType, currentCategorySampleProduct.categoryName)}}>Edit this section</span>
+            { categorySampleProductsSize > 1 && <span className='text-purple-600 cursor-pointer underline mr-2 disabled:opacity-25 disabled:cursor-not-allowed' onClick={() => {handleDeleteSection(currentCategorySampleProduct.id, currentCategorySampleProduct.animalType, currentCategorySampleProduct.categoryName)}} disabled={categorySampleProductsSize <= 1}>Delete this section</span>}
+          </div>
+        }
+        <button disabled={currentCategorySampleProductIndex >= (categorySampleProductsSize - 1)} className={`relative transition-all ease-in-out duration-300 w-10 h-10 bg-[#5A5CC9] text-white opacity-100 ${ ( currentCategorySampleProductIndex >= (categorySampleProductsSize - 1) ) ? "opacity-50 cursor-not-allowed" : ""}`} onClick={onNextCategoryClick}><i className="bx bx-chevron-right text-2xl"></i></button>
         {/* <p className="sm:w-3/5 leading-relaxed text-base sm:pl-10 pl-0">Dummy Description</p> */}
         </div>
     </div>

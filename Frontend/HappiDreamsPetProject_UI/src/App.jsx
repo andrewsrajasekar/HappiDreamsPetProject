@@ -8,8 +8,7 @@ import SignUpPage from './pages/SignUpPage.jsx';
 import {
   BrowserRouter as Router,
   Routes,
-  Route,
-  Navigate,
+  Route
 } from "react-router-dom";
 import Category from './pages/Category.jsx';
 import Products from './pages/Products.jsx';
@@ -24,6 +23,8 @@ import AccountsPage from './pages/AccountsPage.jsx';
 import MainPageCarousel from './components/MainPageCarousel.jsx';
 import OrderHistoryPage from './pages/OrderHistoryPage.jsx';
 import OrderSummary from './pages/OrdersSummary.jsx';
+import AdminPanel from './pages/AdminPanel.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 
 function App() {
   window.onbeforeunload = function () {
@@ -128,6 +129,16 @@ function App() {
             path="/"
             element={
               <div>
+                <MainPageCarousel isPopUp={false} />
+                <HomeTopProducts />
+                <HomeCategorySampleProducts categorySampleProducts={categorySampleProducts} />
+              </div>
+            }
+          />
+            <Route
+            path="/home"
+            element={
+              <div>
                 <MainPageCarousel />
                 <HomeTopProducts />
                 <HomeCategorySampleProducts categorySampleProducts={categorySampleProducts} />
@@ -200,6 +211,14 @@ function App() {
             <OrderSummary />
           }
           />
+          <Route
+          path="/adminpanel"
+          element={
+            <AdminPanel />
+          }
+          />
+
+        <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Router>
       <Footer />

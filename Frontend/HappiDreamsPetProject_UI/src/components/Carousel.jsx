@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import ImageModal from './ImageModal';
+import Modal from './Modal';
 
 const Carousel = ({data, className}) => {
   const maxScrollWidth = useRef(0);
@@ -130,7 +130,12 @@ const Carousel = ({data, className}) => {
           })}
         </div>
       </div>
-      {showImageModal && <ImageModal image={selectedImage} onClose={closeImageModal} />}
+      {showImageModal && <Modal content={(<img
+        src={selectedImage}
+        alt=""
+        className="w-full h-full object-contain"  
+      />)
+      } onClose={closeImageModal} width={"384px"} height={"384px"} isZoomEnabled={true} />}
     </div>
   );
 };

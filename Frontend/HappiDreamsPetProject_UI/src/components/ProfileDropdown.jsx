@@ -36,6 +36,10 @@ function ProfileDropdown(){
     const goToOrderHistory = () => {
       navigate("/orderhistory");
     }
+
+    const goToAdminPanel = () => {
+      navigate("/adminpanel");
+    }
     
 
     return (
@@ -73,6 +77,14 @@ function ProfileDropdown(){
                       <ShoppingCartIcon className="w-6 h-6" />
                       </div>
                         Cart
+                      </span>
+                    </li>
+                    <li className="font-medium"> 
+                      <span onClick={goToAdminPanel} className="cursor-pointer flex items-center transform transition-colors duration-200 border-r-4 border-transparent hover:border-indigo-700 hover:bg-gray-100">
+                      <div className='mr-3'>
+                      <ShoppingCartIcon className="w-6 h-6" />
+                      </div>
+                        Admin Panel
                       </span>
                     </li>
                     <hr className="" />

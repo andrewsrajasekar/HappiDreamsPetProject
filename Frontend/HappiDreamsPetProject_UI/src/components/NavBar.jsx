@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from 'react-router-dom';
-import { ShoppingCartIcon } from '@heroicons/react/20/solid';
 import ProfileDropdown from "./ProfileDropdown";
 
 function NavBar(){
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-        const companyName = "HappiDreamsPet";
+        const companyName = "HappiDreamPets";
         const navigate = useNavigate();
 
         const goToLogin = () => {

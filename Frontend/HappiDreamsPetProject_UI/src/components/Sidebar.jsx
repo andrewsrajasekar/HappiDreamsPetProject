@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
+import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/20/solid'
 
-function Sidebar({handleTabChange}) {
+function Sidebar({tabs}) {
+    const [activeTab, setActiveTab] = useState(null);
+
+    const handleTabPress = (tabFunction, index) => {
+      setActiveTab(index);
+      if(tabFunction !== undefined){
+        tabFunction();
+      }
+    };
 
     const [heightOfSideBar, setHeightOfSideBar] = useState();
     useEffect(() => {
@@ -8,7 +17,7 @@ function Sidebar({handleTabChange}) {
             const navbarHeight = document.getElementById("navBar").offsetHeight;
             const footerHeight = document.getElementById("footer").offsetHeight;
             const windowHeight = window.innerHeight;
-            const remainingHeight = windowHeight - navbarHeight - footerHeight - 0.5 ;
+            const remainingHeight = windowHeight - navbarHeight - footerHeight;
             setHeightOfSideBar(remainingHeight);
         };
 
@@ -20,16 +29,53 @@ function Sidebar({handleTabChange}) {
         };
     }, [])
 
+
+    const renderChildMenuRecursively = (tabsData, parentIndex) => {
+        const [isChildMenuOpened, setIsChildMenuOpened] = useState([]);
+  
+        const handleChildMenuOpen = (index) => {
+            const updatedStates = [...isChildMenuOpened];
+            updatedStates[index] = !updatedStates[index];
+            setIsChildMenuOpened(updatedStates);
+        };
+        
+        return tabsData.map((tab, index) => {
+            let isChildMenu = tab.hasOwnProperty("childMenu");
+            let currentIndex = parentIndex.toString().trim().length > 0 ?  parentIndex + "_" + index : index;
+            currentIndex = currentIndex.toString();
+            let isActive = activeTab === currentIndex;
+
+       return( 
+        <span key={currentIndex}>
+       <span className={`font-medium text-sm items-center rounded-lg text-gray-900 px-4 py-2.5 flex transition-all duration-200 hover:bg-gray-200 group ${(tab.hasOwnProperty("handleTabChange") && typeof tab.handleTabChange === 'function') || isChildMenu ? "cursor-pointer" : ""} ${isActive && !isChildMenu ? "bg-gray-200" : ""}`} onClick={() => {tab.hasOwnProperty("handleTabChange") && typeof tab.handleTabChange === 'function' ? handleTabPress( () => tab.handleTabChange(tab, index), currentIndex ) : isChildMenu ? handleChildMenuOpen(index) : handleTabPress(null, currentIndex)}}>
+            <div className="">{tab.label}</div>
+          <ChevronRightIcon className={`w-5 h-5 mt-[4.3px] transition-transform ${isChildMenu && !isChildMenuOpened[index] ? "" : "hidden"}`} />
+            <ChevronDownIcon className={`w-5 h-5 mt-[4.3px] transition-transform ${isChildMenu && isChildMenuOpened[index] ? "" : "hidden"}`} />
+          </span>
+          
+          {isChildMenu && <div id={currentIndex} className={`pl-4 ${isChildMenuOpened[index] ? "" : "hidden"}`}>
+          {renderChildMenuRecursively(tab.childMenu, currentIndex)}
+    </div>}
+    </span>
+
+    ) 
+        })
+    }
+
+    
+    const renderedTabs =  renderChildMenuRecursively(tabs, "");
+
     return (
-        <div className="bg-white lg:flex md:w-64 md:flex-col">
-            <div className="flex-col pt-5 flex bg-gray-100 overflow-y-auto" style={{ height: heightOfSideBar }}>
+        <div className="bg-white lg:flex md:w-auto md:flex-col">
+            <div className="flex-col pt-5 flex bg-gray-100 overflow-y-auto  flex-grow" style={{ height: heightOfSideBar }}>
                 <div className="flex-col justify-between px-4 flex">
                     <div className="space-y-4">
                         <div className="bg-top bg-cover space-y-1">
-                            <span className="font-medium text-sm items-center rounded-lg text-gray-900 px-4 py-2.5 flex
+                            {/* <span className="font-medium text-sm items-center rounded-lg text-gray-900 px-4 py-2.5 flex
                     transition-all duration-200 hover:bg-gray-200 group cursor-pointer" onClick={() => {handleTabChange("password")}}>Password</span>
                             <span className="font-medium text-sm items-center rounded-lg text-gray-900 px-4 py-2.5 flex
-                    transition-all duration-200 hover:bg-gray-200 group cursor-pointer" onClick={() => {handleTabChange("address")}}>Address</span>
+                    transition-all duration-200 hover:bg-gray-200 group cursor-pointer" onClick={() => {handleTabChange("address")}}>Address</span> */}
+                            {renderedTabs}
                         </div>
                     </div>
                 </div>

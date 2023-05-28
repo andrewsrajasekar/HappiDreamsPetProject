@@ -1,13 +1,26 @@
-import { event } from 'jquery';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-function Products(){
-    const { category_name } = useParams();
-    const { animal_type } = useParams();
+function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from_components, animal_type_from_components, hideTitleVisibility, handleCheckBox, checkedBoxIds, preventProductNavigation}){
+    let { category_name } = useParams();
+    let { animal_type } = useParams();
+    if(category_name_from_components !== undefined){
+      category_name = category_name_from_components;
+    }
+    if(animal_type_from_components !== undefined){
+      animal_type = animal_type_from_components;
+    }
     const [isAllDataInArrayUndefined, setIsAllDataInArrayUndefined] = useState(true);
     const [renderedElements, setRenderedElements] = useState();
     const [lowestPriceFilter, setLowestPriceFilter] = useState(-1);
     const [highestPriceFilter, setHighestPriceFilter] = useState(-1);
+    const [isChecked, setIsChecked] = useState([]);
+
+    const handleCheckBoxChange = (index, product) => {
+      isChecked[index] = isChecked[index] !== undefined ? !isChecked[index] : true;
+      const newChecked = [...isChecked];
+      setIsChecked(newChecked);
+      handleCheckBox(product, isChecked[index]);
+    }
     const navigate = useNavigate();
 
     const handleChange=(event)=> {
@@ -53,14 +66,25 @@ function Products(){
     }
 
     const products = [
-        {"id": 1, "name" : "Dummy Product 1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
-        {"id": 2, "name" : "Dummy Product 1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92000"},
-        {"id": 3, "name" : "Dummy Product 1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92500"},
-        {"id": 4, "name" : "Dummy Product 2", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9900"},
-        {"id": 5, "name" : "Dummy Product 2", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9875"},
-        {"id": 6, "name" : "Dummy Product 1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B9300"},
-        {"id": 7, "name" : "Dummy Product 3", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B9200"},
-        {"id": 8, "name" : "Dummy Product 3", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"}
+        {"id": 1, "name" : "Dummy Product 1", "description": "Dummy Description 1_1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
+        {"id": 2, "name" : "Dummy Product 1", "description": "Dummy Description 1_2", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92000"},
+        {"id": 3, "name" : "Dummy Product 1", "description": "Dummy Description 1_3", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92500"},
+        {"id": 4, "name" : "Dummy Product 2", "description": "Dummy Description 2_1", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9900"},
+        {"id": 5, "name" : "Dummy Product 2", "description": "Dummy Description 2_2", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9875"},
+        {"id": 6, "name" : "Dummy Product 1", "description": "Dummy Description 1_4", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B9300"},
+        {"id": 7, "name" : "Dummy Product 3", "description": "Dummy Description 3_1", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B9200"},
+        {"id": 8, "name" : "Dummy Product 3", "description": "Dummy Description 3_2", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
+        {"id":9,"name":"Dummy Product 1", "description": "Dummy Description 1_5","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":10,"name":"Dummy Product 1", "description": "Dummy Description 1_6","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":11,"name":"Dummy Product 1", "description": "Dummy Description 1_7","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":12,"name":"Dummy Product 1", "description": "Dummy Description 1_8","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":13,"name":"Dummy Product 1", "description": "Dummy Description 1_9","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":14,"name":"Dummy Product 1", "description": "Dummy Description 1_10","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":15,"name":"Dummy Product 1", "description": "Dummy Description 1_11","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":16,"name":"Dummy Product 1", "description": "Dummy Description 1_12","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":17,"name":"Dummy Product 1", "description": "Dummy Description 1_13","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":18,"name":"Dummy Product 1", "description": "Dummy Description 1_14","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+        {"id":19,"name":"Dummy Product 1", "description": "Dummy Description 1_15","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":20,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":21,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":22,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":23,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":24,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":25,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":26,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":27,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":28,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":29,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":30,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":31,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":32,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":33,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":34,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":35,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":36,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":37,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":38,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":39,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":40,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"}
       ];
   
       const onProductClick = (product) => {
@@ -69,20 +93,33 @@ function Products(){
       }
 
       useEffect(() => {
-        setRenderedElements(products.map((element) => {
+        setRenderedElements(products.map((element, index) => {
         if(element["categoryName"] === category_name){
           if(isAllDataInArrayUndefined){
             setIsAllDataInArrayUndefined(false);
           }
+          if(checkedBoxIds !== undefined && Array.isArray(checkedBoxIds) && checkedBoxIds.length > 0 && checkedBoxIds.includes(element.id)){
+            isChecked[index] = true;
+            setIsChecked(isChecked);
+          }
             return(
               <li key={element.id}>
-              <span href="#" className="group block overflow-hidden cursor-pointer" onClick={() => {onProductClick(element)}}>
+              <span className="group block overflow-hidden cursor-pointer" onClick={preventProductNavigation !== undefined ? preventProductNavigation ? null : () => {onProductClick(element)} : () => {onProductClick(element)}}>
                 <img
                   src={element.image}
                   className="h-[350px] w-full object-cover transition duration-500 group-hover:scale-105 sm:h-[450px]"
                 />
   
                 <div className="relative bg-white pt-3">
+                  {handleCheckBox !== undefined && typeof handleCheckBox === 'function' &&
+                  <input
+                  type="checkbox"
+                  checked={isChecked[index]}
+                  onChange={() => {handleCheckBoxChange(index, element)}}
+                  className="form-checkbox h-5 w-5 text-indigo-600"
+                  disabled={maxCheckedForCheckBox !== undefined && maxCheckedForCheckBox !== null && ((isChecked[index] !== undefined && !isChecked[index]) || isChecked[index] === undefined)  && isChecked.filter((c) => c).length >= maxCheckedForCheckBox}
+                />
+                  }
                   <h3
                     className="text-xs text-gray-700 group-hover:underline group-hover:underline-offset-4"
                   >
@@ -105,18 +142,19 @@ function Products(){
       if(isAllDataInArrayUndefined){
         setRenderedElements(<div>No Products Found</div>);
       }
-      }, [isAllDataInArrayUndefined]);
+      }, [isAllDataInArrayUndefined, category_name_from_components, animal_type_from_components, isChecked]);
 
   return (
     <section>
     <div className="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
-      <header>
+      <header className={`${hideTitleVisibility !== undefined ? hideTitleVisibility ? "hidden" : "" : ""}`}>
         <h2 className="text-xl font-bold text-gray-900 sm:text-3xl flex items-center justify-center mb-16">
           {animal_type} - {category_name} Collections
         </h2>
       </header>
   
-      <div className="mt-8 block lg:hidden">
+    <div className={` ${hideSortVisibility !== undefined ? hideSortVisibility ? "hidden" : "" : ""}`}>
+      <div className={`mt-8 block lg:hidden`}>
         <button
           className="flex cursor-pointer items-center gap-2 border-b border-gray-400 pb-1 text-gray-900 transition hover:border-gray-600"
         >
@@ -138,9 +176,12 @@ function Products(){
           </svg>
         </button>
       </div>
-  
-      <div className="mt-4 lg:mt-8 lg:grid lg:grid-cols-4 lg:items-start lg:gap-8">
-        <div className="hidden space-y-4 lg:block">
+      </div>
+
+
+      <div className={` ${hideSortVisibility !== undefined ? hideSortVisibility ? "" : "mt-4 lg:mt-8 " : "mt-4 lg:mt-8 "} lg:grid lg:grid-cols-4 lg:items-start lg:gap-8`}>
+      <div className={` ${hideSortVisibility !== undefined ? hideSortVisibility ? "hidden" : "" : ""}`}>
+        <div className={`hidden space-y-4 lg:block`}>
           <div>
             <label className="block text-xs font-medium text-gray-700">
               Sort By
@@ -244,9 +285,10 @@ function Products(){
             </div>
           </div>
         </div>
+        </div>
   
-        <div className="lg:col-span-3">
-          <ul className={`${isAllDataInArrayUndefined ? "flex items-center justify-center" : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"}`}>
+        <div className={` ${hideSortVisibility !== undefined ? hideSortVisibility ? "lg:col-span-4" : "lg:col-span-3" : "lg:col-span-3"} `}>
+          <ul className={`${isAllDataInArrayUndefined ? "flex items-center justify-center" : `grid gap-4 sm:grid-cols-2 ${hideSortVisibility !== undefined ? hideSortVisibility ? "lg:grid-cols-4" : "lg:grid-cols-3" : "lg:grid-cols-3"} `} `}>
             {renderedElements}
           </ul>
         </div>
