@@ -90,3 +90,12 @@
   margin-top: calc(2rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(2rem * var(--tw-space-y-reverse));
 }
+
+label#rupee {
+  position:relative;
+  left:+15px;
+}
+
+input#productPrice {
+  text-align:right;
+}

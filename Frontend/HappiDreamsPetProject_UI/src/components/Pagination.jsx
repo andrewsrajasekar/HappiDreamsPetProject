@@ -1,7 +1,7 @@
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/20/solid'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
-export default function Pagination({totalPages, onClickOfPageNumber, initialPerPageResult, totalResult}) {
+export default function Pagination({totalPages, onClickOfPageNumber, initialPerPageResult, totalResult, manualPageNumber}) {
 
     const [fromItem, setFromItem] = useState(1);
     const [toItem, setToItem] = useState(initialPerPageResult);
@@ -18,6 +18,12 @@ export default function Pagination({totalPages, onClickOfPageNumber, initialPerP
             setCurrentPage(pageNumber);
         }
     }
+
+    useEffect(() => {
+      if(manualPageNumber !== undefined && manualPageNumber > 0){
+        onPageNumberChange(manualPageNumber);
+      }
+    }, [manualPageNumber])
 
     let paginationNumberLimit = 6;
 

@@ -4,6 +4,11 @@ import { Transition } from 'react-transition-group';
 import InventoryComponent from './InventoryComponent';
 import AnimalCreateForm from './AnimalCreateForm';
 import CategoryCreateForm from './CategoryCreateForm';
+import ProductCreateForm from './ProductCreateForm';
+import AnimalList from './AnimalList';
+import CategoryList from './CategoryList';
+import TabBar from '../../TabBar';
+import ProductList from './ProductList';
 
 function InventoryMainpage(){
 
@@ -13,6 +18,8 @@ function InventoryMainpage(){
     const [isAnimalTransitionStart, setIsAnimalTransitionStart] = useState(false);
     const [isCategoryComponentShow, setCategoryComponentShow] = useState(false);
     const [isCategoryTransitionStart, setIsCategoryTransitionStart] = useState(false);
+    const [removeFlexClass, setRemoveFlexClass] = useState(false);
+    const [renderedTabContent, setRenderedTabContent] = useState();
     const animalTabs = [
       {
       "id": 0,
@@ -27,7 +34,13 @@ function InventoryMainpage(){
       },
       {
         "id": 1,
-        "label": "Modify a Animal Type"
+        "label": "Modify a Animal Type",
+        "handleOnClick": () => {
+          return(
+            <AnimalList />
+          )
+        },
+        "removeFlex": true
       }
   ]
     const categoryTabs = [
@@ -44,9 +57,48 @@ function InventoryMainpage(){
       },
       {
         "id": 1,
-        "label": `Modify a Category for ${selectedAnimalType.name}`
+        "label": `Modify a Category for ${selectedAnimalType.name}`,
+        "handleOnClick": () => {
+          return(
+            <CategoryList />
+          )
+        },
+        "removeFlex": true
       }
   ]
+
+  const productTabs = [
+    {
+    "id": 0,
+    "label": `Create a Product for ${selectedAnimalType.name} - ${selectedCategory.name}`,
+    "handleOnClick": () => {
+      return(
+        <div className='mx-96'>
+        <ProductCreateForm />
+        </div>
+      )
+    }
+    },
+    {
+      "id": 1,
+      "label": `Modify a Category for ${selectedAnimalType.name} - ${selectedCategory.name}`,
+      "handleOnClick": () => {
+        return(
+          <ProductList categoryName={"Dummy Category 1"} animalName={"Dog"} />
+        )
+      },
+      "removeFlex": true
+    }
+    ]
+
+    const handleTabClick = (content, tabData) => {
+      if(tabData.hasOwnProperty("removeFlex") && tabData.removeFlex){
+        setRemoveFlexClass(true);
+      }else{
+        setRemoveFlexClass(false);
+      }
+      setRenderedTabContent(content);
+    }
 
     const openAnimalPage = () => {
         setIsAnimalTransitionStart(true);
@@ -98,7 +150,7 @@ function InventoryMainpage(){
 
 
         {!(isAnimalComponentShow && isCategoryComponentShow) &&
-                <div className='flex items-center justify-center  p-10'>
+                <div className='flex items-center justify-center p-10'>
                 <span className='flex flex-row'>
                     <h3 className='font-bold font-medium cursor-pointer text-purple-600 hover:text-purple-900' onClick={openAnimalPage}>{selectedAnimalType.name}</h3>
                     <MinusIcon className='w-6 -mr-[12px] mt-0.5 ml-2' />
@@ -110,8 +162,15 @@ function InventoryMainpage(){
                 <span className='flex flex-row ml-4'>
                     <h3 className={`font-bold font-medium ${selectedAnimalType.id >= 0 ? "cursor-pointer text-purple-600 hover:text-purple-900" : "cursor-not-allowed text-gray-400"}`} disabled={selectedAnimalType.id < 0} onClick={selectedAnimalType.id < 0 ?  null : openCategoryPage}>{selectedCategory.name}</h3>
                 </span>
-
             </div>
+        }
+        {selectedAnimalType.id >= 0 && selectedCategory.id >= 0 && 
+          <div className="flex flex-col mx-32">
+          <TabBar tabs={productTabs} onTabClick={(content, tabData) => {handleTabClick(content, tabData)}} />
+          <div className={`mt-10 mb-10 ${removeFlexClass ? "" : "flex items-center justify-center"}`}>
+            {renderedTabContent}
+          </div>
+        </div>
         }
         </div>
     );

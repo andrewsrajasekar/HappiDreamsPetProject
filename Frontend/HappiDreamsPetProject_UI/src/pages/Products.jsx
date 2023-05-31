@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from_components, animal_type_from_components, hideTitleVisibility, handleCheckBox, checkedBoxIds, preventProductNavigation}){
+function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from_components, animal_type_from_components, hideTitleVisibility, handleCheckBox, checkedBoxIds, preventProductNavigation, isAdminPanelUsage, onEdit}){
     let { category_name } = useParams();
     let { animal_type } = useParams();
+    const isAdminPanel = isAdminPanelUsage !== undefined ? isAdminPanelUsage : false;
     if(category_name_from_components !== undefined){
       category_name = category_name_from_components;
     }
@@ -14,6 +15,29 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
     const [lowestPriceFilter, setLowestPriceFilter] = useState(-1);
     const [highestPriceFilter, setHighestPriceFilter] = useState(-1);
     const [isChecked, setIsChecked] = useState([]);
+    const productsData = [
+      {"id": 1, "name" : "Dummy Product 1", "color": "Red", "size": "XL", "weight": "2", "weight_units": "Kilogram", "description": "Dummy Description 1_1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
+      {"id": 2, "name" : "Dummy Product 1", "description": "Dummy Description 1_2", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92000"},
+      {"id": 3, "name" : "Dummy Product 1", "description": "Dummy Description 1_3", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92500"},
+      {"id": 4, "name" : "Dummy Product 2", "description": "Dummy Description 2_1", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9900"},
+      {"id": 5, "name" : "Dummy Product 2", "description": "Dummy Description 2_2", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9875"},
+      {"id": 6, "name" : "Dummy Product 1", "description": "Dummy Description 1_4", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B9300"},
+      {"id": 7, "name" : "Dummy Product 3", "description": "Dummy Description 3_1", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B9200"},
+      {"id": 8, "name" : "Dummy Product 3", "description": "Dummy Description 3_2", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
+      {"id":9,"name":"Dummy Product 1", "description": "Dummy Description 1_5","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":10,"name":"Dummy Product 1", "description": "Dummy Description 1_6","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":11,"name":"Dummy Product 1", "description": "Dummy Description 1_7","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":12,"name":"Dummy Product 1", "description": "Dummy Description 1_8","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":13,"name":"Dummy Product 1", "description": "Dummy Description 1_9","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":14,"name":"Dummy Product 1", "description": "Dummy Description 1_10","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":15,"name":"Dummy Product 1", "description": "Dummy Description 1_11","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":16,"name":"Dummy Product 1", "description": "Dummy Description 1_12","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":17,"name":"Dummy Product 1", "description": "Dummy Description 1_13","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":18,"name":"Dummy Product 1", "description": "Dummy Description 1_14","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
+      {"id":19,"name":"Dummy Product 1", "description": "Dummy Description 1_15","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":20,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":21,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":22,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":23,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":24,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":25,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":26,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":27,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":28,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":29,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":30,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":31,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":32,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":33,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":34,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":35,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":36,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":37,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":38,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":39,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":40,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"}
+    ];
+
+    const [products, setProducts] = useState(productsData);
 
     const handleCheckBoxChange = (index, product) => {
       isChecked[index] = isChecked[index] !== undefined ? !isChecked[index] : true;
@@ -65,31 +89,61 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
         }
     }
 
-    const products = [
-        {"id": 1, "name" : "Dummy Product 1", "description": "Dummy Description 1_1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
-        {"id": 2, "name" : "Dummy Product 1", "description": "Dummy Description 1_2", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92000"},
-        {"id": 3, "name" : "Dummy Product 1", "description": "Dummy Description 1_3", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92500"},
-        {"id": 4, "name" : "Dummy Product 2", "description": "Dummy Description 2_1", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9900"},
-        {"id": 5, "name" : "Dummy Product 2", "description": "Dummy Description 2_2", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9875"},
-        {"id": 6, "name" : "Dummy Product 1", "description": "Dummy Description 1_4", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B9300"},
-        {"id": 7, "name" : "Dummy Product 3", "description": "Dummy Description 3_1", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B9200"},
-        {"id": 8, "name" : "Dummy Product 3", "description": "Dummy Description 3_2", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
-        {"id":9,"name":"Dummy Product 1", "description": "Dummy Description 1_5","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":10,"name":"Dummy Product 1", "description": "Dummy Description 1_6","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":11,"name":"Dummy Product 1", "description": "Dummy Description 1_7","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":12,"name":"Dummy Product 1", "description": "Dummy Description 1_8","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":13,"name":"Dummy Product 1", "description": "Dummy Description 1_9","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":14,"name":"Dummy Product 1", "description": "Dummy Description 1_10","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":15,"name":"Dummy Product 1", "description": "Dummy Description 1_11","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":16,"name":"Dummy Product 1", "description": "Dummy Description 1_12","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":17,"name":"Dummy Product 1", "description": "Dummy Description 1_13","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":18,"name":"Dummy Product 1", "description": "Dummy Description 1_14","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-        {"id":19,"name":"Dummy Product 1", "description": "Dummy Description 1_15","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":20,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":21,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":22,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":23,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":24,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":25,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":26,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":27,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":28,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":29,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":30,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":31,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":32,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":33,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":34,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":35,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":36,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":37,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":38,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":39,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":40,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"}
-      ];
-  
+    const renderProductColorElement = (element) => {
+      if(element.hasOwnProperty("color") && element.color !== undefined){
+        return(
+          <span className='mr-2'>
+            Color: {element.color}
+          </span>
+        )
+      }
+    }
+
+    const renderProductSizeElement = (element) => {
+      if(element.hasOwnProperty("size") && element.size !== undefined){
+        return(
+          <span className='mr-2'>
+            Size: {element.size}
+          </span>
+        )
+      }
+    }
+
+    const renderProductWeightElement = (element) => {
+      if(element.hasOwnProperty("weight") && element.weight !== undefined){
+        return(
+          <span className='mr-2'>
+            Weight: {element.weight} {element.weight_units}
+          </span>
+        )
+      }
+    }
       const onProductClick = (product) => {
         console.log(product);
         navigate("/" + animal_type + "/" + category_name + "/" + product.id)
+      }
+
+      const handleDelete = (index) => {
+        let data = [...products];
+        data.splice(index, 1);
+        setProducts(data);
+      }
+
+      const handleEdit = (productInfo) => {
+        productInfo.isExternalUpload = true;
+        productInfo.images = [];
+        if(isAdminPanel){
+          onEdit(productInfo);
+        }
+      }
+
+      const handleVariation = (productInfo) => {
+        productInfo.isExternalUpload = true;
+        productInfo.images = [];
+        productInfo.variationPrimaryId = productInfo.id;
+        if(isAdminPanel){
+          onEdit(productInfo);
+        }
       }
 
       useEffect(() => {
@@ -104,11 +158,12 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
           }
             return(
               <li key={element.id}>
-              <span className="group block overflow-hidden cursor-pointer" onClick={preventProductNavigation !== undefined ? preventProductNavigation ? null : () => {onProductClick(element)} : () => {onProductClick(element)}}>
-                <img
-                  src={element.image}
-                  className="h-[350px] w-full object-cover transition duration-500 group-hover:scale-105 sm:h-[450px]"
-                />
+              <span className={`group block overflow-hidden ${preventProductNavigation !== undefined ? preventProductNavigation ? "" : "cursor-pointer" : "cursor-pointer"}`} onClick={preventProductNavigation !== undefined ? preventProductNavigation ? null : () => {onProductClick(element)} : () => {onProductClick(element)}}>
+              
+              <img
+                src={element.image}
+                className="h-[350px] w-full object-cover transition duration-500 group-hover:scale-105 sm:h-[450px]"
+              />
   
                 <div className="relative bg-white pt-3">
                   {handleCheckBox !== undefined && typeof handleCheckBox === 'function' &&
@@ -121,15 +176,34 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
                 />
                   }
                   <h3
-                    className="text-xs text-gray-700 group-hover:underline group-hover:underline-offset-4"
+                    className={`text-xs text-gray-700 ${isAdminPanel ? "" : "group-hover:underline group-hover:underline-offset-4"}`}
                   >
                     {element.name}
                   </h3>
+
+                  {isAdminPanel &&
+                    <span className='flex flex-col text-xs italic font-bold'>
+                      {renderProductColorElement(element)}
+                      {renderProductSizeElement(element)}
+                      {renderProductWeightElement(element)}
+                  
+                </span>
+                }
+                  
   
                   <p className="mt-2">
                     <span className="sr-only"> Regular Price </span>
-  
+                    {!isAdminPanel ? 
+                      <span className="tracking-wider text-gray-900">  {element.price} </span>
+                      :
+                    <div className='flex flex-row whitespace-nowrap'>
                     <span className="tracking-wider text-gray-900">  {element.price} </span>
+                    <span className="ml-2 cursor-pointer mr-2 text-green-400 hover:text-green-500" onClick={() => {handleVariation(element)}}>Add a Variation</span>
+                    <span className="cursor-pointer mr-2 text-indigo-500 hover:text-indigo-900" onClick={() => {handleEdit(element)}}>Edit</span>
+                    <span className="cursor-pointer mr-2 text-red-500 hover:text-red-900" onClick={()=>{handleDelete(index)}}>Delete</span>
+                    </div>
+                  }
+                    
                   </p>
                 </div>
               </span>
@@ -142,7 +216,7 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
       if(isAllDataInArrayUndefined){
         setRenderedElements(<div>No Products Found</div>);
       }
-      }, [isAllDataInArrayUndefined, category_name_from_components, animal_type_from_components, isChecked]);
+      }, [isAllDataInArrayUndefined, category_name_from_components, animal_type_from_components, isChecked, products]);
 
   return (
     <section>

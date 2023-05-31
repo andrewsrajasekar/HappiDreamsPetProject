@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Transition } from 'react-transition-group';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
 import Select from "react-select";
-import TabBar from '../../Tabbar';
+import TabBar from "../../TabBar";
 
 const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) => {
   const [renderedTabContent, setRenderedTabContent] = useState();
@@ -10,6 +10,7 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
   const [isSideBarInitiated, setIsSideBarInitiated] = useState(true);
   const [isSideBarContentVisible, setIsSideBarContentVisible] = useState(true);
   const [type, setType] = useState("");
+  const [removeFlexClass, setRemoveFlexClass] = useState(false);
 
   const animalOptions = [
     { id: 1, name: 'Cat', label: 'Cat' },
@@ -127,10 +128,6 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
     }
   }
 
-  const handleTabClick = (tab) => {
-    setActiveTab(tab);
-  };
-
   const handleToggleBottomBar = () => {
     setSideBarVisible(!isSideBarVisible);
     setIsSideBarInitiated(!isSideBarInitiated);
@@ -140,12 +137,21 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
     setIsSideBarContentVisible(!isSideBarContentVisible);
   };
 
+  const handleTabClick = (content, tabData) => {
+      if(tabData.hasOwnProperty("removeFlex") && tabData.removeFlex){
+        setRemoveFlexClass(true);
+      }else{
+        setRemoveFlexClass(false);
+      }
+      setRenderedTabContent(content);
+  }
+
   return (
     <div className='flex flex-row h-full'>
-    <div className={`flex-grow ${isSideBarVisible ? "pl-10 pt-10 pb-10" : "p-10"}`}>
+    <div className={`flex-grow ${isSideBarVisible ? "pl-5 pt-5 pb-5" : "p-5"}`}>
     <div className="flex flex-col">
-      <TabBar tabs={tabs} onTabClick={(content) => {setRenderedTabContent(content)}} />
-      <div className='flex items-center justify-center'>
+      <TabBar tabs={tabs} onTabClick={(content, tabData) => {handleTabClick(content, tabData)}} />
+      <div className={`${removeFlexClass ? "" : "flex items-center justify-center"}`}>
         {renderedTabContent}
       </div>
     </div>
@@ -205,8 +211,9 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
       placeholder={getPlaceholder()} onChange={(selectedValue) => {handleChangeInDropDown(selectedValue)}} styles={customStyles}  getOptionValue={(option) => option.id} value={getValueForDropDown()}  />
              <div className='flex items-center justify-center'>
              <button
-          className={`bg-green-500 w-36 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4 ${handleSave !== undefined || selectedAnimalType.id > 0 ? "" : "hidden"}`}
+          className={`bg-green-500 w-36 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4 ${handleSave !== undefined ? "" : "hidden"} disabled:opacity-25 disabled:cursor-not-allowed`} 
           onClick={handleSaveProgress}
+          disabled={type === "animal" ? selectedAnimalType.id <= 0 : selectedCategory.id <= 0}
         >
           Save
         </button>

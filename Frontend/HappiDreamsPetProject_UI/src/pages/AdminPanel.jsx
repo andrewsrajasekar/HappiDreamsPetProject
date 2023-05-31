@@ -4,6 +4,7 @@ import MainBoard from '../components/AdminComponents/HomePage/MainBoard';
 import TopProducts from '../components/AdminComponents/HomePage/TopProducts';
 import Category from '../components/AdminComponents/HomePage/Category';
 import InventoryMainpage from '../components/AdminComponents/Inventory/InventoryMainPage';
+import AboutUs from '../components/AdminComponents/AboutUs/AboutUs';
 
 function AdminPanel(){
     const [renderContent, setRenderContent] = useState((<><div className='text-2xl font-bold flex flex-grow justify-center items-center'>Welcome to Customization Page, Select a Category from Side to Start!</div></>));
@@ -53,7 +54,7 @@ function AdminPanel(){
                     label: "Brands Logo",
                     handleTabChange: function(){
                       setRenderContent(
-                        <div className='flex justify-center flex-grow'>Brands Logo</div>
+                       <AboutUs />
                     );
                     }
                   }

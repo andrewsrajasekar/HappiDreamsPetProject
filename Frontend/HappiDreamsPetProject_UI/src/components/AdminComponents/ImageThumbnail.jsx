@@ -1,6 +1,6 @@
 import React from 'react';
 
-function ImageThumbnail({ image, onDelete, showName }) {
+function ImageThumbnail({ image, onDelete, showName, removeWidth }) {
   const handleDelete = () => {
     onDelete(image.id);
   };
@@ -17,7 +17,7 @@ function ImageThumbnail({ image, onDelete, showName }) {
   };
 
   return (
-    <div className="w-1/4 p-2">
+    <div className={`${removeWidth !== undefined ? removeWidth ? "" : "w-1/4" : "w-1/4"} p-2`}>
       <div className="relative">
         <img
           src={image.url}

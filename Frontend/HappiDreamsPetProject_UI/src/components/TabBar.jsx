@@ -1,19 +1,19 @@
 import React, { useEffect, useState } from 'react';
 
-function TabBar({tabs, onTabClick}) {
+function TabBar({tabs, onTabClick, removePadding}) {
   const [activeTab, setActiveTab] = useState(0);
 
   const handleTabClick = (tabData, tabIndex) => {
     setActiveTab(tabIndex);
     if(tabData.hasOwnProperty("handleOnClick")){
-        onTabClick(tabData["handleOnClick"]());
+        onTabClick(tabData["handleOnClick"](), tabData, tabIndex);
     }
   };
 
   useEffect(() => {
     if(tabs.length > 0){  
         if(tabs[0].hasOwnProperty("handleOnClick")){
-            onTabClick(tabs[0]["handleOnClick"]());
+            onTabClick(tabs[0]["handleOnClick"](), tabs[0], 0);
         }
     }
   }, [])
@@ -29,7 +29,7 @@ function TabBar({tabs, onTabClick}) {
     {tabs.map((tab, index) => {
         return(
         <li className="w-full" key={tab.label + "_" + index}>
-            <span className={`inline-block cursor-pointer w-full cursor-pointer p-4 ${activeTab === index ? "text-gray-900 bg-gray-100 rounded-l-lg" : "bg-white hover:text-gray-700 hover:bg-gray-50"} `} onClick={activeTab === index ? null : () => {handleTabClick(tab, index)}} >{tab.label}</span>
+            <span className={`inline-block cursor-pointer w-full cursor-pointer ${removePadding !== undefined ? removePadding ? "p-1.5" : "p-4" : "p-4"} ${activeTab === index ? "text-gray-900 bg-gray-100 rounded-l-lg" : "bg-white hover:text-gray-700 hover:bg-gray-50"} `} onClick={activeTab === index ? null : () => {handleTabClick(tab, index)}} >{tab.label}</span>
         </li>
         )
     })}

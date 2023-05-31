@@ -1,16 +1,29 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import compressAndResizeImage from "../../../utils/ImageCompressAndResizer";
+import ImageThumbnail from "../ImageThumbnail";
+import { IMAGEFORMAT } from "../../../utils/ImageFormat";
 
-function CategoryCreateForm({animalName}){
-    const [categoryName, setCategoryName] = useState("");
-    const [categoryDescription, setCategoryDescription] = useState("");
-    const [file, setFile] = useState(null);
-    const [imageUrl, setImageUrl] = useState('');
-    const [isFileUpload, setIsFileUpload] = useState(true);
+function CategoryCreateForm({animalName, categoryName_Edit, categoryDescription_Edit, image_Edit, imageUrl_Edit, isFileUpload_Edit, editMode}){
+    const [isEditComponent, setIsEditComponent] = useState(editMode !== undefined ? editMode : false);  
+    const [categoryName, setCategoryName] = useState(isEditComponent ? categoryName_Edit : "");
+    const [categoryDescription, setCategoryDescription] = useState(isEditComponent ? categoryDescription_Edit : "");
+    const [file, setFile] = useState(isEditComponent ? image_Edit === undefined ? null : image_Edit : null);
+    const [imageUrl, setImageUrl] = useState(isEditComponent ? imageUrl_Edit : "");
+    const [isFileUpload, setIsFileUpload] = useState(isEditComponent ? isFileUpload_Edit : true);
+    const fileInputRef = useRef(null);
   
-    const handleFileChange = (event) => {
+    const handleFileChange = async(event) => {
       const selectedFile = event.target.files[0];
-      setFile(selectedFile);
+      const compressedImage = await compressAndResizeImage(selectedFile, 600, 360, IMAGEFORMAT.PNG);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      setFile({name: selectedFile.name, url: compressedImage});
     };
+
+    const handleDeleteImage = () => {
+      setFile(null);
+    }
   
     const handleImageUrlChange = (event) => {
       const url = event.target.value;
@@ -22,6 +35,22 @@ function CategoryCreateForm({animalName}){
         setFile(null);
         setImageUrl('');
     };
+
+    const isSaveEnabled = () => {
+      if(categoryName.trim() === "" || categoryDescription.trim() === ""){
+        return false;
+      }
+      if(isFileUpload){
+        if(file === null){
+          return false;
+        }
+      }else{
+        if(imageUrl.trim() === ""){
+          return false;
+        }
+      }
+      return true;
+    }
 
     const handleFormSubmit = (event) => {
     event.preventDefault();
@@ -50,6 +79,7 @@ function CategoryCreateForm({animalName}){
 
     return(
         <>
+        <h3 className="font-bold text-lg flex items-center justify-center mb-5 mt-5" id="titleText">{isEditComponent ? "Update" : "Create"} Category for {animalName}</h3>
         <form onSubmit={handleFormSubmit} className="mt-8">
             <div className="mb-4">
                 <label className="block text-gray-700 font-bold mb-2" htmlFor="categoryName">
@@ -70,7 +100,7 @@ function CategoryCreateForm({animalName}){
                 <label className="block text-gray-700 font-bold mb-2" htmlFor="categoryDescription">
                     Category Description
                 </label>
-                <input
+                <textarea
           className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
           id="categoryName"
           type="text"
@@ -104,8 +134,23 @@ function CategoryCreateForm({animalName}){
             className="border border-gray-300 px-3 py-2 rounded-lg w-full"
             type="file"
             id="fileInput"
-            onChange={handleFileChange}
+            accept="image/*"
+            disabled={file !== null}
+            onChange={file !== null ? null : handleFileChange}
+            ref={fileInputRef}
           />
+            {file !== null && 
+            <div className="flex items-center justify-center flex-row mt-5">
+              <div>
+                  <ImageThumbnail
+                    image={file}
+                    onDelete={handleDeleteImage}
+                    showName={false}
+                    removeWidth={true}
+                  />
+               </div>
+            </div>
+          }
         </div>
       ) : (
         <div className="mb-4">
@@ -122,10 +167,11 @@ function CategoryCreateForm({animalName}){
         </div>
       )}
       <button
-        className="bg-purple-600 hover:bg-purple-900 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        className="bg-purple-600 hover:bg-purple-900 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline disabled:opacity-25 disabled:cursor-not-allowed"
         type="submit"
+        disabled={!isSaveEnabled()}
       >
-        Save
+         {isEditComponent ? "Update" : "Save"}
       </button>
         </form>
         </>
