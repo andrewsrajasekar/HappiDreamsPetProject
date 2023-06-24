@@ -80,7 +80,7 @@ public class ProductControllerInterceptor extends APIController implements Handl
             failureResponse
                     .setData(new JSONObject().put(ProductConstants.LowerCase.FIELD, "animal").put(LowerCase.MESSAGE,
                             "Animal Id is Invalid"));
-            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            response.setStatus(HttpStatus.NOT_FOUND.value());
             response.setContentType("application/json");
             response.getWriter().write(failureResponse.throwInvalidPathVariable().getBody().toString());
             response.getWriter().flush();
@@ -91,7 +91,7 @@ public class ProductControllerInterceptor extends APIController implements Handl
             failureResponse.setData(
                     new JSONObject().put(ProductConstants.LowerCase.FIELD, "category").put(LowerCase.MESSAGE,
                             "Category Id is Invalid"));
-            response.setStatus(HttpStatus.BAD_REQUEST.value());
+            response.setStatus(HttpStatus.NOT_FOUND.value());
             response.setContentType("application/json");
             response.getWriter().write(failureResponse.throwInvalidPathVariable().getBody().toString());
             response.getWriter().flush();

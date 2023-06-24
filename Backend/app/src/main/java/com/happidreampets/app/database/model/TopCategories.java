@@ -2,6 +2,7 @@ package com.happidreampets.app.database.model;
 
 import org.json.JSONObject;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -30,9 +31,10 @@ public class TopCategories {
             return columnName;
         }
     }
-    
+
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @OneToOne
@@ -43,25 +45,32 @@ public class TopCategories {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @Column(name = "order_number")
     private Integer order_number;
 
-    public TopCategories(){}
+    public TopCategories() {
+    }
 
     public Long getId() {
         return id;
     }
+
     public Product getProduct() {
         return product;
     }
+
     public void setProduct(Product product) {
         this.product = product;
     }
+
     public Integer getOrder_number() {
         return order_number;
     }
+
     public void setOrder_number(Integer order_number) {
         this.order_number = order_number;
     }
+
     public Category getCategory() {
         return category;
     }
@@ -70,7 +79,7 @@ public class TopCategories {
         this.category = category;
     }
 
-    public JSONObject toJSON(){
-        return new JSONObject( this );
+    public JSONObject toJSON() {
+        return new JSONObject(this);
     }
 }

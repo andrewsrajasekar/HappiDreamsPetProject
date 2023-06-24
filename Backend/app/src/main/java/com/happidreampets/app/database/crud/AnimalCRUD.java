@@ -111,7 +111,7 @@ public class AnimalCRUD {
         Integer startIndex = getDbFilter() != null ? getDbFilter().getStartIndex() : 0;
         Integer limit = getDbFilter() != null ? getDbFilter().getLimitIndex() : 0;
         Pageable pageable = sort != null ? PageRequest.of(startIndex, limit, sort) : PageRequest.of(startIndex, limit);
-        Page<Animal> animalsPage = animalRepository.findAll(pageable);
+        Page<Animal> animalsPage = animalRepository.findAllByToBeDeletedIsFalse(pageable);
         Iterable<Animal> animalsIterable = animalsPage.getContent();
         animals.put(ProductConstants.LowerCase.DATA,
                 getDataInRequiredFormat(animalsIterable).get(ProductConstants.LowerCase.DATA));
@@ -120,7 +120,7 @@ public class AnimalCRUD {
     }
 
     public JSONObject getAnimalInJSON(Long id) {
-        Animal animal = animalRepository.findById(id).orElse(null);
+        Animal animal = animalRepository.findByIdAndToBeDeletedIsFalse(id);
         if (animal == null) {
             return null;
         } else {
@@ -129,7 +129,7 @@ public class AnimalCRUD {
     }
 
     public Animal getAnimal(Long id) {
-        return animalRepository.findById(id).orElse(null);
+        return animalRepository.findByIdAndToBeDeletedIsFalse(id);
     }
 
     public Animal createAnimal(String name, String description) {
@@ -141,7 +141,7 @@ public class AnimalCRUD {
     }
 
     public Animal updateAnimal(Long id, String name, String description, String image) throws Exception {
-        Animal animal = animalRepository.findById(id).orElse(null);
+        Animal animal = animalRepository.findByIdAndToBeDeletedIsFalse(id);
         if (null == animal) {
             throw new Exception(ExceptionMessageCase.ANIMAL_NOT_FOUND);
         }
@@ -158,21 +158,25 @@ public class AnimalCRUD {
     }
 
     public Boolean deleteAnimalById(Long id) throws Exception {
-        Animal animal = animalRepository.findById(id).orElse(null);
+        Animal animal = animalRepository.findByIdAndToBeDeletedIsFalse(id);
         if (null == animal) {
             throw new Exception(ExceptionMessageCase.ANIMAL_NOT_FOUND);
         }
-        animalRepository.deleteById(id);
+        animal.setToBeDeleted(Boolean.TRUE);
+        animal.setToBeDeletedStatusChangeTime(System.currentTimeMillis());
+        animalRepository.save(animal);
         return true;
     }
 
     public Boolean deleteAnimalByName(String name) throws Exception {
-        List<Animal> animalList = animalRepository.findByName(name);
+        List<Animal> animalList = animalRepository.findByNameAndToBeDeletedIsFalse(name);
         if (animalList.isEmpty()) {
             throw new Exception(ExceptionMessageCase.ANIMAL_NOT_FOUND);
         }
         for (Animal animal : animalList) {
-            animalRepository.delete(animal);
+            animal.setToBeDeleted(Boolean.TRUE);
+            animal.setToBeDeletedStatusChangeTime(System.currentTimeMillis());
+            animalRepository.save(animal);
         }
         return true;
     }
@@ -235,7 +239,7 @@ public class AnimalCRUD {
         String ANIMAL_IMAGE_FOLDER = ANIMALS_IMAGE_LOCATION_BEFORE_STATIC;
         String animalImage = animal.getImage();
         if (animalImage == null) {
-            throw new Exception(ExceptionMessageCase.NO_IMAGE_PRESENT);
+            throw new Exception(ExceptionMessageCase.NO_IMAGE_PRESENT_FOR_ANIMAL);
         }
         Path path = Paths.get(
                 ANIMAL_IMAGE_FOLDER + SpecialCharacter.SLASH + animalImage);

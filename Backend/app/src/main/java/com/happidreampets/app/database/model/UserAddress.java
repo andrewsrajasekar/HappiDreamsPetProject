@@ -7,24 +7,28 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 @Entity
 @Table
-public class Animal {
-
-    public enum ANIMALCOLUMN {
+public class UserAddress {
+    public enum USERADDRESS {
         ID("id"),
-        NAME("name"),
-        DESCRIPTION("description"),
-        IMAGE("image"),
+        USER_ID("user_id"),
+        ADDRESS("address"),
+        CITY("city"),
+        STATE("state"),
+        COUNTRY("country"),
+        PINCODE("pincode"),
         TO_BE_DELETED("to_be_deleted"),
         TO_BE_DELETED_STATUSCHANGETIME("to_be_deleted_statusChangeTime"),
         ADDED_TIME("added_time");
 
         private final String columnName;
 
-        ANIMALCOLUMN(String columnName) {
+        USERADDRESS(String columnName) {
             this.columnName = columnName;
         }
 
@@ -38,14 +42,24 @@ public class Animal {
     @Column(name = "id")
     private Long id;
 
-    @Column(name = "name")
-    private String name;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 
-    @Column(name = "description")
-    private String description;
+    @Column(name = "address")
+    private String address;
 
-    @Column(name = "image")
-    private String image;
+    @Column(name = "city")
+    private String city;
+
+    @Column(name = "state")
+    private String state;
+
+    @Column(name = "country")
+    private String country;
+
+    @Column(name = "pincode")
+    private String pincode;
 
     @Column(name = "to_be_deleted")
     private Boolean toBeDeleted = Boolean.FALSE;
@@ -56,43 +70,64 @@ public class Animal {
     @Column(name = "added_time")
     private Long addedTime;
 
-    public Animal() {
-    }
-
     public Long getId() {
         return id;
     }
 
-    public String getName() {
-        return name;
+    public User getUser() {
+        return user;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public String getDescription() {
-        return description;
+    public String getAddress() {
+        return address;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public void setAddress(String address) {
+        this.address = address;
     }
 
-    public String getImage() {
-        return image;
+    public String getCity() {
+        return city;
     }
 
-    public void setImage(String image) {
-        this.image = image;
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
+        this.state = state;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
+    }
+
+    public String getPincode() {
+        return pincode;
+    }
+
+    public void setPincode(String pincode) {
+        this.pincode = pincode;
     }
 
     public Boolean getToBeDeleted() {
         return toBeDeleted;
     }
 
-    public void setToBeDeleted(Boolean to_be_deleted) {
-        this.toBeDeleted = to_be_deleted;
+    public void setToBeDeleted(Boolean toBeDeleted) {
+        this.toBeDeleted = toBeDeleted;
     }
 
     public Long getToBeDeletedStatusChangeTime() {

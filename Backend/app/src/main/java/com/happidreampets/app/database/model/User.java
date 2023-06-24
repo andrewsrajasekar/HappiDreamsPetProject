@@ -2,15 +2,37 @@ package com.happidreampets.app.database.model;
 
 import org.json.JSONObject;
 
+import com.happidreampets.app.database.utils.UserRoleConverter;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
 @Table
 public class User {
+
+    public enum USER_ROLE {
+        ADMIN(1),
+        USER(2);
+
+        Integer roleId;
+
+        USER_ROLE(Integer roleId) {
+            this.roleId = roleId;
+        }
+
+        public Integer getRoleId() {
+            return this.roleId;
+        }
+
+    }
 
     public enum USERCOLUMN {
         ID("id"),
@@ -19,11 +41,7 @@ public class User {
         EMAIL("email"),
         PHONE_EXTENSION("phone_extension"),
         PHONE_NUMBER("phone_number"),
-        ADDRESS("address"),
-        CITY("city"),
-        STATE("state"),
-        COUNTRY("country"),
-        PINCODE("pincode");
+        DEFAULT_ADDRESS_ID("default_address_id");
 
         private final String columnName;
 
@@ -35,32 +53,53 @@ public class User {
             return columnName;
         }
     }
-    
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Long id;
-    private String name;
-    private String password;
-    private String email;
-    private String phone_extension;
-    private String phone_number;
-    private String address;
-    private String city;
-    private String state;
-    private String country;
-    private String pincode;
 
-    public User(){}
-    
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
+    private Long id;
+
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "password")
+    private String password;
+
+    @Column(name = "email", unique = true)
+    private String email;
+
+    @Column(name = "phone_extension")
+    private String phone_extension;
+
+    @Column(name = "phone_number")
+    private String phone_number;
+
+    @OneToOne
+    @JoinColumn(name = "default_address_id")
+    private UserAddress defaultAddress;
+
+    @Column(name = "role")
+    @Convert(converter = UserRoleConverter.class)
+    private USER_ROLE role;
+
+    @Column(name = "added_time")
+    private Long addedTime;
+
+    public User() {
+    }
+
     public Long getId() {
         return id;
     }
+
     public String getName() {
         return name;
     }
+
     public void setName(String name) {
         this.name = name;
     }
+
     public String getPassword() {
         return password;
     }
@@ -93,47 +132,31 @@ public class User {
         this.phone_number = phone_number;
     }
 
-    public String getAddress() {
-        return address;
+    public UserAddress getDefaultAddress() {
+        return defaultAddress;
     }
 
-    public void setAddress(String address) {
-        this.address = address;
+    public void setDefaultAddress(UserAddress defaultAddress) {
+        this.defaultAddress = defaultAddress;
     }
 
-    public String getCity() {
-        return city;
+    public USER_ROLE getRole() {
+        return role;
     }
 
-    public void setCity(String city) {
-        this.city = city;
+    public void setRole(USER_ROLE role) {
+        this.role = role;
     }
 
-    public String getState() {
-        return state;
+    public Long getAddedTime() {
+        return addedTime;
     }
 
-    public void setState(String state) {
-        this.state = state;
+    public void setAddedTime(Long addedTime) {
+        this.addedTime = addedTime;
     }
 
-    public String getCountry() {
-        return country;
-    }
-
-    public void setCountry(String country) {
-        this.country = country;
-    }
-
-    public String getPincode() {
-        return pincode;
-    }
-
-    public void setPincode(String pincode) {
-        this.pincode = pincode;
-    }
-    
-    public JSONObject toJSON(){
-        return new JSONObject( this );
+    public JSONObject toJSON() {
+        return new JSONObject(this);
     }
 }

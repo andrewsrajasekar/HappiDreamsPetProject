@@ -12,6 +12,12 @@ import com.happidreampets.app.database.model.User;
 @Repository
 public interface UserRepository extends CrudRepository<User, Long> {
     List<User> findByName(String name);
+
+    User findByEmailAndPassword(String email, String password);
+
+    User findByEmail(String email);
+
     User findById(long id);
+
     Page<User> findAll(Pageable pageable);
 }

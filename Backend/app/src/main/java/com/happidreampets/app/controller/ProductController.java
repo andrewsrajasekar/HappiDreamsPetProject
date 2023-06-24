@@ -5,14 +5,11 @@ import java.util.Map;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartException;
@@ -68,7 +65,7 @@ public class ProductController extends APIController {
         return failureResponse.getResponse();
     }
 
-    @GetMapping("/products")
+    @RequestMapping(value = "/products", method = RequestMethod.GET)
     public ResponseEntity<String> getProducts(
             @RequestParam(value = ProductConstants.LowerCase.PAGE, defaultValue = "1", required = true) Integer page,
             @RequestParam(value = ProductConstants.SnakeCase.PER_PAGE, defaultValue = "6", required = true) Integer per_page) {
@@ -104,7 +101,7 @@ public class ProductController extends APIController {
         }
     }
 
-    @GetMapping("/product/{productId}")
+    @RequestMapping(value = "/product/{productId}", method = RequestMethod.GET)
     public ResponseEntity<String> getProduct() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
@@ -130,7 +127,7 @@ public class ProductController extends APIController {
         }
     }
 
-    @PostMapping("/product")
+    @RequestMapping(value = "/product", method = RequestMethod.POST)
     public ResponseEntity<String> createProduct(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         JSONObject errorData = new JSONObject();
@@ -157,7 +154,7 @@ public class ProductController extends APIController {
             if (product == null) {
                 throw new Exception();
             } else {
-                successResponse.setApiResponseStatus(HttpStatus.OK);
+                successResponse.setApiResponseStatus(HttpStatus.CREATED);
             }
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, product.getId()));
             return successResponse.getResponse();
@@ -171,7 +168,7 @@ public class ProductController extends APIController {
         }
     }
 
-    @PutMapping("/product/{productId}")
+    @RequestMapping(value = "/product/{productId}", method = RequestMethod.PUT)
     public ResponseEntity<String> updateProduct(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         JSONObject errorData = new JSONObject();
@@ -212,7 +209,7 @@ public class ProductController extends APIController {
         }
     }
 
-    @PostMapping("/product/{productId}/image")
+    @RequestMapping(value = "/product/{productId}/image", method = RequestMethod.POST)
     public ResponseEntity<String> addProductImage(
             @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile productImage) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -226,7 +223,7 @@ public class ProductController extends APIController {
                     productCRUD.getExtension(originalFilename));
 
             successResponse = new SuccessResponse();
-            successResponse.setApiResponseStatus(HttpStatus.OK);
+            successResponse.setApiResponseStatus(HttpStatus.CREATED);
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, currentProduct.getId()));
             return successResponse.getResponse();
         } catch (Exception ex) {
@@ -236,7 +233,7 @@ public class ProductController extends APIController {
         }
     }
 
-    @DeleteMapping("/product/{productId}/image/{imageId}")
+    @RequestMapping(value = "/product/{productId}/image/{imageId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteProductImage(@PathVariable("imageId") Long imageId) {
         SuccessResponse successResponse = new SuccessResponse();
         try {
@@ -254,8 +251,8 @@ public class ProductController extends APIController {
         }
     }
 
-    @PutMapping("/product/{productId}/image/{imageId}/thumbnail")
-    public ResponseEntity<String> addProductImage(@PathVariable("imageId") Long imageId) {
+    @RequestMapping(value = "/product/{productId}/image/{imageId}/thumbnail", method = RequestMethod.PUT)
+    public ResponseEntity<String> updateProductImageAsThumbnail(@PathVariable("imageId") Long imageId) {
         SuccessResponse successResponse = new SuccessResponse();
         try {
             ProductCRUD productCRUD = getProductCRUD();
@@ -273,7 +270,7 @@ public class ProductController extends APIController {
         }
     }
 
-    @DeleteMapping("/product/{productId}")
+    @RequestMapping(value = "/product/{productId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> updateProduct() {
         SuccessResponse successResponse = new SuccessResponse();
         try {

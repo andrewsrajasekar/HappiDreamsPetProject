@@ -1,4 +1,5 @@
 package com.happidreampets.app.database.repository;
+
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -10,7 +11,9 @@ import com.happidreampets.app.database.model.Animal;
 
 @Repository
 public interface AnimalRepository extends CrudRepository<Animal, Long> {
-    List<Animal> findByName(String name);
-    Animal findById(long id);
-    Page<Animal> findAll(Pageable pageable);
+    List<Animal> findByNameAndToBeDeletedIsFalse(String name);
+
+    Animal findByIdAndToBeDeletedIsFalse(long id);
+
+    Page<Animal> findAllByToBeDeletedIsFalse(Pageable pageable);
 }

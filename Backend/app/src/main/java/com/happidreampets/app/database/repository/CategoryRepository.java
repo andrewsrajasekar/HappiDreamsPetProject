@@ -12,9 +12,9 @@ import com.happidreampets.app.database.model.Category;
 
 @Repository
 public interface CategoryRepository extends CrudRepository<Category, Long> {
-    List<Category> findByName(String name);
+    List<Category> findByNameAndToBeDeletedIsFalse(String name);
 
-    Category findById(long id);
+    Category findByIdAndToBeDeletedIsFalse(long id);
 
-    Page<Category> findAllByAnimal(Pageable pageable, Animal animal);
+    Page<Category> findAllByAnimalAndToBeDeletedIsFalse(Pageable pageable, Animal animal);
 }

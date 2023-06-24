@@ -1,4 +1,5 @@
 package com.happidreampets.app.database.repository;
+
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -12,7 +13,10 @@ import com.happidreampets.app.database.model.User;
 @Repository
 public interface OrderHistoryRepository extends CrudRepository<OrderHistory, Long> {
     List<OrderHistory> findByAddedTime(Long time);
+
     List<OrderHistory> findByUser(User user);
+
     OrderHistory findById(long id);
-    Page<OrderHistory> findAll(Pageable pageable);
+
+    Page<OrderHistory> findAllByUser(Pageable pageable, User user);
 }

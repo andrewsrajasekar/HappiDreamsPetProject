@@ -2,6 +2,7 @@ package com.happidreampets.app.database.model;
 
 import org.json.JSONObject;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,7 +19,7 @@ public class OrderHistory {
         ID("id"),
         USER_ID("user_id"),
         PRODUCT_ID("product_id"),
-        ADDEDTIME("addedTime");
+        ADDED_TIME("added_time");
 
         private final String columnName;
 
@@ -30,9 +31,10 @@ public class OrderHistory {
             return columnName;
         }
     }
-    
+
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
 
     @ManyToOne
@@ -40,16 +42,23 @@ public class OrderHistory {
     private User user;
 
     @ManyToOne
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @JoinColumn(name = "product_ids")
+    private Product[] products;
 
+    @ManyToOne
+    @JoinColumn(name = "address_id")
+    private UserAddress address;
+
+    @Column(name = "added_time")
     private Long addedTime;
 
-    public OrderHistory(){}
-    
+    public OrderHistory() {
+    }
+
     public Long getId() {
         return id;
     }
+
     public User getUser() {
         return user;
     }
@@ -57,15 +66,15 @@ public class OrderHistory {
     public void setUser(User user) {
         this.user = user;
     }
-    
-    public Product getProduct() {
-        return product;
+
+    public Product[] getProducts() {
+        return products;
     }
 
-    public void setProduct(Product product) {
-        this.product = product;
+    public void setProducts(Product[] products) {
+        this.products = products;
     }
-    
+
     public Long getAddedTime() {
         return addedTime;
     }
@@ -74,7 +83,15 @@ public class OrderHistory {
         this.addedTime = addedTime;
     }
 
-    public JSONObject toJSON(){
-        return new JSONObject( this );
+    public UserAddress getAddress() {
+        return address;
+    }
+
+    public void setAddress(UserAddress address) {
+        this.address = address;
+    }
+
+    public JSONObject toJSON() {
+        return new JSONObject(this);
     }
 }

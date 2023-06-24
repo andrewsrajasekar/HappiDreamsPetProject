@@ -10,7 +10,11 @@ public class UserConstants {
     }
 
     public class LowerCase {
-
+        public static final String USER = "user";
+        public static final String NAME = "name";
+        public static final String PASSWORD = "password";
+        public static final String EMAIL = "email";
+        public static final String ID = "id";
     }
 
     public class CamelCase {
@@ -18,7 +22,11 @@ public class UserConstants {
     }
 
     public class SnakeCase {
-
+        public static final String PHONE_EXTENSION = "phone_extension";
+        public static final String PHONE_NUMBER = "phone_number";
+        public static final String OLD_PASSWORD = "old_password";
+        public static final String NEW_PASSWORD = "new_password";
+        public static final String USER_ID = "user_id";
     }
 
     public class CapitalizationCase {
@@ -29,7 +37,8 @@ public class UserConstants {
     }
 
     public class MessageCase {
-
+        public static final String INVALID_EMAIL_FORMAT = "Invalid Email Format";
+        public static final String INVALID_OLD_PASSWORD = "Invalid Old Password";
     }
 
     public class SpecialCharacter {
@@ -38,6 +47,10 @@ public class UserConstants {
 
     public class ExceptionMessageCase {
         public static final String USER_NOT_FOUND = "User Not Found";
+        public static final String MISSING_USER_FIELD_FOR_AUTHENTICATION = "Missing User Field For Authentication";
+        public static final String MISSING_USER_FIELD_FOR_CREATE_USER = "Missing User Field For Create User";
+        public static final String MISSING_USER_FIELD_FOR_UPDATE_USER = "Missing User Field For Update User";
+        public static final String INVALID_USER_ID = "Invalid User Id";
     }
 
     public class OtherCase {

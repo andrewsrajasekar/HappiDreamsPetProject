@@ -18,7 +18,9 @@ import org.springframework.stereotype.Component;
 
 import com.happidreampets.app.constants.CartConstants;
 import com.happidreampets.app.constants.CategoryConstants;
+import com.happidreampets.app.constants.ControllerConstants;
 import com.happidreampets.app.constants.ProductConstants;
+import com.happidreampets.app.constants.TopCategoriesConstants;
 import com.happidreampets.app.constants.TopCategoriesConstants.CapitalizationCase;
 import com.happidreampets.app.constants.TopCategoriesConstants.ExceptionMessageCase;
 import com.happidreampets.app.constants.TopCategoriesConstants.MessageCase;
@@ -40,13 +42,20 @@ public class TopCategoriesCRUD {
     @Autowired
     private ProductCRUD productCRUD;
 
+    @Value("${top.categories.limit}")
     private Integer topCategoriesLimit;
+
+    @Value("${top.categories.products.limit}")
     private Integer topCategoriesProductsLimit;
 
-    public TopCategoriesCRUD(@Value("${top.categories.limit}") Integer topCategoriesLimit,
-            @Value("${top.categories.products.limit}") Integer topCategoriesProductsLimit) {
-        this.topCategoriesLimit = topCategoriesLimit;
-        this.topCategoriesProductsLimit = topCategoriesProductsLimit;
+    private Boolean fromController = Boolean.FALSE;
+
+    public Boolean getFromController() {
+        return fromController;
+    }
+
+    public void setFromController(Boolean fromController) {
+        this.fromController = fromController;
     }
 
     private DbFilter dbFilter;
@@ -184,21 +193,33 @@ public class TopCategoriesCRUD {
         if (existingCategoryProductsData.isEmpty()) {
             Long categoriesExisting = topCategoriesRepository.countDistinctCategories();
             if (categoriesExisting >= topCategoriesLimit) {
-                throw new Exception(
-                        CapitalizationCase.ALREADY + CartConstants.LowerCase.GAP + topCategoriesLimit
+                throw new Exception(getFromController()
+                        ? MessageCase.CATEGORIES_EXISTING_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM
+                        : CapitalizationCase.ALREADY
+                                + CartConstants.LowerCase.GAP + topCategoriesLimit
                                 + CartConstants.LowerCase.GAP
-                                + MessageCase.CATEGORIES_EXISTING_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM);
+                                + TopCategoriesConstants.MessageCase.CATEGORIES_EXISTING_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM);
             }
         }
         if (existingCategoryProductsData.size() + productIds.size() >= topCategoriesProductsLimit) {
-            throw new Exception(CapitalizationCase.ALREADY + CartConstants.LowerCase.GAP + topCategoriesProductsLimit
-                    + CartConstants.LowerCase.GAP
-                    + MessageCase.PRODUCTS_EXISTS_IN_GIVEN_CATEGORY_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM);
+            throw new Exception(getFromController()
+                    ? MessageCase.PRODUCTS_IN_GIVEN_CATEGORY_IN_TOPCATEGORIES_WHICH_WILL_BE_EXCEEDED
+                    : TopCategoriesConstants.MessageCase.MAXIMUM_OF
+                            + topCategoriesProductsLimit
+                            + CartConstants.LowerCase.GAP
+                            + TopCategoriesConstants.MessageCase.PRODUCTS_IN_GIVEN_CATEGORY_IN_TOPCATEGORIES_WHICH_WILL_BE_EXCEEDED);
         }
         for (TopCategories topCategories : existingCategoryProductsData) {
             if (productIds.contains(topCategories.getProduct().getId())) {
-                throw new Exception(ProductConstants.ExceptionMessageCase.PRODUCT_OF_ID_ARG0_ALREADY_EXISTS
-                        .replace(ProductConstants.LoggerCase.ARG0, topCategories.getProduct().getId().toString()));
+                throw new Exception(getFromController()
+                        ? ProductConstants.ExceptionMessageCase.PRODUCT_OF_ID_ARG0_ALREADY_EXISTS
+                                .replace(ProductConstants.LoggerCase.ARG0,
+                                        topCategories.getProduct().getId().toString())
+                                + ControllerConstants.SpecialCharacter.UNDERSCORE
+                                + ControllerConstants.CapitalizationCase.BYPASS_EXCEPTION
+                        : ProductConstants.ExceptionMessageCase.PRODUCT_OF_ID_ARG0_ALREADY_EXISTS
+                                .replace(ProductConstants.LoggerCase.ARG0,
+                                        topCategories.getProduct().getId().toString()));
             }
         }
     }
@@ -208,8 +229,13 @@ public class TopCategoriesCRUD {
         for (Long productId : productIds) {
             Product product = productCRUD.getProduct(productId);
             if (product == null) {
-                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_PRODUCT_ID_HYPHEN_ARG0
-                        .replace(ProductConstants.LoggerCase.ARG0, productId.toString()));
+                throw new Exception(getFromController()
+                        ? ProductConstants.ExceptionMessageCase.INVALID_PRODUCT_ID_HYPHEN_ARG0
+                                .replace(ProductConstants.LoggerCase.ARG0, productId.toString())
+                                + ControllerConstants.SpecialCharacter.UNDERSCORE
+                                + ControllerConstants.CapitalizationCase.BYPASS_EXCEPTION
+                        : ProductConstants.ExceptionMessageCase.INVALID_PRODUCT_ID_HYPHEN_ARG0
+                                .replace(ProductConstants.LoggerCase.ARG0, productId.toString()));
             }
         }
         List<TopCategories> result = new ArrayList<>();
@@ -228,20 +254,33 @@ public class TopCategoriesCRUD {
         if (existingCategoryProductsData.isEmpty()) {
             Long categoriesExisting = topCategoriesRepository.countDistinctCategories();
             if (categoriesExisting >= topCategoriesLimit) {
-                throw new Exception(
-                        CapitalizationCase.ALREADY + CartConstants.LowerCase.GAP + topCategoriesLimit
+                throw new Exception(getFromController()
+                        ? MessageCase.CATEGORIES_EXISTING_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM
+                        : CapitalizationCase.ALREADY
+                                + CartConstants.LowerCase.GAP + topCategoriesLimit
                                 + CartConstants.LowerCase.GAP
-                                + MessageCase.CATEGORIES_EXISTING_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM);
+                                + TopCategoriesConstants.MessageCase.CATEGORIES_EXISTING_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM);
             }
         }
         if (existingCategoryProductsData.size() >= topCategoriesProductsLimit) {
-            throw new Exception(CapitalizationCase.ALREADY + CartConstants.LowerCase.GAP + topCategoriesProductsLimit
-                    + CartConstants.LowerCase.GAP
-                    + MessageCase.PRODUCTS_EXISTS_IN_GIVEN_CATEGORY_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM);
+            throw new Exception(getFromController()
+                    ? MessageCase.PRODUCTS_IN_GIVEN_CATEGORY_IN_TOPCATEGORIES_WHICH_WILL_BE_EXCEEDED
+                    : TopCategoriesConstants.MessageCase.MAXIMUM_OF
+                            + topCategoriesProductsLimit
+                            + CartConstants.LowerCase.GAP
+                            + TopCategoriesConstants.MessageCase.PRODUCTS_IN_GIVEN_CATEGORY_IN_TOPCATEGORIES_WHICH_WILL_BE_EXCEEDED);
         }
         for (TopCategories topCategories : existingCategoryProductsData) {
             if (topCategories.getProduct().getId().equals(product.getId())) {
-                throw new Exception(ProductConstants.ExceptionMessageCase.PRODUCT_ALREADY_EXISTS);
+                throw new Exception(getFromController()
+                        ? ProductConstants.ExceptionMessageCase.PRODUCT_OF_ID_ARG0_ALREADY_EXISTS
+                                .replace(ProductConstants.LoggerCase.ARG0,
+                                        topCategories.getProduct().getId().toString())
+                                + ControllerConstants.SpecialCharacter.UNDERSCORE
+                                + ControllerConstants.CapitalizationCase.BYPASS_EXCEPTION
+                        : ProductConstants.ExceptionMessageCase.PRODUCT_OF_ID_ARG0_ALREADY_EXISTS
+                                .replace(ProductConstants.LoggerCase.ARG0,
+                                        topCategories.getProduct().getId().toString()));
             }
         }
         TopCategories newTopCategory = new TopCategories();

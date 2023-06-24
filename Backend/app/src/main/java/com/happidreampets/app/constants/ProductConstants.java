@@ -27,6 +27,7 @@ public class ProductConstants {
         public static final String PNG = "png";
         public static final String STATIC = "static";
         public static final String PRODUCTS = "products";
+        public static final String PRODUCT = "product";
         public static final String PAGE = "page";
         public static final String COUNT = "count";
         public static final String INFO = "info";
@@ -46,6 +47,7 @@ public class ProductConstants {
         public static final String PER_PAGE = "per_page";
         public static final String MORE_RECORDS = "more_records";
         public static final String PRODUCT_ID = "product_id";
+        public static final String IMAGE_ID = "image_id";
     }
 
     public class CapitalizationCase {

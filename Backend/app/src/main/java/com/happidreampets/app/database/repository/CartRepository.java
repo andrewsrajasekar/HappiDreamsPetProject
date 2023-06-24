@@ -13,6 +13,12 @@ import com.happidreampets.app.database.model.User;
 @Repository
 public interface CartRepository extends CrudRepository<Cart, Long> {
     List<Cart> findByUser(User user);
+
     Cart findById(long id);
-    Page<Cart> findAll(Pageable pageable);
+
+    Cart findByUserAndProductId(User user, long productId);
+
+    Page<Cart> findAllByUser(User user, Pageable pageable);
+
+    Iterable<Cart> findAllByUser(User user);
 }

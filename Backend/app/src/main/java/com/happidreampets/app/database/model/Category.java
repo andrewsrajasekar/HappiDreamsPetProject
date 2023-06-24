@@ -2,6 +2,7 @@ package com.happidreampets.app.database.model;
 
 import org.json.JSONObject;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -19,7 +20,9 @@ public class Category {
         NAME("name"),
         DESCRIPTION("description"),
         IMAGE("image"),
-        ADDEDTIME("addedTime"),
+        TO_BE_DELETED("to_be_deleted"),
+        TO_BE_DELETED_STATUSCHANGETIME("to_be_deleted_statusChangeTime"),
+        ADDED_TIME("added_time"),
         ANIMAL_ID("animal_id");
 
         private final String columnName;
@@ -34,13 +37,26 @@ public class Category {
     }
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
+
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "description")
     private String description;
+
+    @Column(name = "image")
     private String image;
-    private Boolean toBeDeleted;
+
+    @Column(name = "to_be_deleted")
+    private Boolean toBeDeleted = Boolean.FALSE;
+
+    @Column(name = "to_be_deleted_statusChangeTime")
     private Long toBeDeletedStatusChangeTime;
+
+    @Column(name = "added_time")
     private Long addedTime;
 
     @ManyToOne

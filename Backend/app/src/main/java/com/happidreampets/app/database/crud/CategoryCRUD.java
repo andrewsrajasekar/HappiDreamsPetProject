@@ -19,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import com.happidreampets.app.constants.AnimalConstants;
+import com.happidreampets.app.constants.CategoryConstants;
 import com.happidreampets.app.constants.CategoryConstants.LowerCase;
 import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.constants.ProductConstants.OtherCase;
@@ -113,7 +114,7 @@ public class CategoryCRUD {
         Integer startIndex = getDbFilter() != null ? getDbFilter().getStartIndex() : 0;
         Integer limit = getDbFilter() != null ? getDbFilter().getLimitIndex() : 0;
         Pageable pageable = sort != null ? PageRequest.of(startIndex, limit, sort) : PageRequest.of(startIndex, limit);
-        Page<Category> categoryPage = categoryRepository.findAllByAnimal(pageable, animal);
+        Page<Category> categoryPage = categoryRepository.findAllByAnimalAndToBeDeletedIsFalse(pageable, animal);
         Iterable<Category> categoryIterable = categoryPage.getContent();
         categoryData.put(ProductConstants.LowerCase.DATA,
                 getDataInRequiredFormat(categoryIterable).get(ProductConstants.LowerCase.DATA));
@@ -122,7 +123,7 @@ public class CategoryCRUD {
     }
 
     public Category getCategoryDetail(Long id) {
-        return categoryRepository.findById(id).orElse(null);
+        return categoryRepository.findByIdAndToBeDeletedIsFalse(id);
     }
 
     public Category createCategory(String name, String description, String image, Animal animal) throws Exception {
@@ -143,7 +144,7 @@ public class CategoryCRUD {
     }
 
     public Category updateCategoryByName(Long id, String name) throws Exception {
-        Category category = categoryRepository.findById(id).orElse(null);
+        Category category = categoryRepository.findByIdAndToBeDeletedIsFalse(id);
         if (null == category) {
             throw new Exception(ExceptionMessageCase.CATEGORY_NOT_FOUND);
         }
@@ -154,7 +155,7 @@ public class CategoryCRUD {
     }
 
     public Category updateCategoryAnimal(Long id, Animal animal) throws Exception {
-        Category category = categoryRepository.findById(id).orElse(null);
+        Category category = categoryRepository.findByIdAndToBeDeletedIsFalse(id);
         if (null == category) {
             throw new Exception(ExceptionMessageCase.CATEGORY_NOT_FOUND);
         }
@@ -166,7 +167,7 @@ public class CategoryCRUD {
 
     public Category updateCategory(Long id, String name, String description, String image, Animal animal)
             throws Exception {
-        Category category = categoryRepository.findById(id).orElse(null);
+        Category category = categoryRepository.findByIdAndToBeDeletedIsFalse(id);
         if (null == category) {
             throw new Exception(ExceptionMessageCase.CATEGORY_NOT_FOUND);
         }
@@ -184,21 +185,25 @@ public class CategoryCRUD {
     }
 
     public Boolean deleteCategoryById(Long id) throws Exception {
-        Category category = categoryRepository.findById(id).orElse(null);
+        Category category = categoryRepository.findByIdAndToBeDeletedIsFalse(id);
         if (null == category) {
             throw new Exception(ExceptionMessageCase.CATEGORY_NOT_FOUND);
         }
-        categoryRepository.deleteById(id);
+        category.setToBeDeleted(Boolean.TRUE);
+        category.setToBeDeletedStatusChangeTime(System.currentTimeMillis());
+        categoryRepository.save(category);
         return true;
     }
 
     public Boolean deleteCategoryByName(String name) throws Exception {
-        List<Category> categoryList = categoryRepository.findByName(name);
+        List<Category> categoryList = categoryRepository.findByNameAndToBeDeletedIsFalse(name);
         if (categoryList.isEmpty()) {
             throw new Exception(AnimalConstants.ExceptionMessageCase.ANIMAL_NOT_FOUND);
         }
         for (Category category : categoryList) {
-            categoryRepository.delete(category);
+            category.setToBeDeleted(Boolean.TRUE);
+            category.setToBeDeletedStatusChangeTime(System.currentTimeMillis());
+            categoryRepository.save(category);
         }
         return true;
     }
@@ -261,7 +266,7 @@ public class CategoryCRUD {
         String CATEGORY_IMAGE_FOLDER = CATEGORY_IMAGE_LOCATION_BEFORE_STATIC;
         String categoryImage = category.getImage();
         if (categoryImage == null) {
-            throw new Exception(AnimalConstants.ExceptionMessageCase.NO_IMAGE_PRESENT);
+            throw new Exception(CategoryConstants.ExceptionMessageCase.NO_IMAGE_PRESENT_FOR_CATEGORY);
         }
         Path path = Paths.get(
                 CATEGORY_IMAGE_FOLDER + SpecialCharacter.SLASH + categoryImage);

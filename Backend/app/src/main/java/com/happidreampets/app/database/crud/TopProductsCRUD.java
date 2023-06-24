@@ -16,7 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
-import com.happidreampets.app.constants.CartConstants;
 import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.constants.TopCategoriesConstants;
 import com.happidreampets.app.constants.TopProductsConstants.MessageCase;
@@ -38,11 +37,8 @@ public class TopProductsCRUD {
     @Autowired
     private ProductCRUD productCRUD;
 
+    @Value("${top.products.limit}")
     Integer topProductsLimit;
-
-    public TopProductsCRUD(@Value("${top.products.limit}") Integer topProductsLimit) {
-        this.topProductsLimit = topProductsLimit;
-    }
 
     private DbFilter dbFilter;
 
@@ -130,10 +126,7 @@ public class TopProductsCRUD {
     public TopProducts createTopProducts(Product product, Integer orderNumber) throws Exception {
         List<TopProducts> allTopProducts = topProductsRepository.findAllSortedDataWithOrderNumberAsc();
         if (allTopProducts.size() >= topProductsLimit) {
-            throw new Exception(
-                    TopCategoriesConstants.CapitalizationCase.ALREADY + CartConstants.LowerCase.GAP + topProductsLimit
-                            + CartConstants.LowerCase.GAP
-                            + MessageCase.PRODUCTS_EXISTING_IN_TOPPRODUCTS_WHICH_IS_MAXMIMUM);
+            throw new Exception(MessageCase.PRODUCTS_EXISTING_IN_TOPPRODUCTS_WHICH_IS_MAXMIMUM);
         }
         TopProducts existingTopProduct = topProductsRepository.findByProduct(product);
         if (existingTopProduct != null) {

@@ -1,27 +1,26 @@
 package com.happidreampets.app.database.crud;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-import org.apache.commons.lang3.EnumUtils;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import com.happidreampets.app.constants.CartConstants;
 import com.happidreampets.app.constants.ProductConstants;
+import com.happidreampets.app.constants.UserAddressConstants;
+import com.happidreampets.app.constants.UserConstants.MessageCase;
 import com.happidreampets.app.constants.UserConstants.CapitalizationCase;
 import com.happidreampets.app.constants.UserConstants.ExceptionMessageCase;
+import com.happidreampets.app.constants.UserConstants.LowerCase;
+import com.happidreampets.app.constants.UserConstants.SnakeCase;
+import com.happidreampets.app.controller.APIController.ERROR_CODES;
 import com.happidreampets.app.database.model.User;
-import com.happidreampets.app.database.model.User.USERCOLUMN;
+import com.happidreampets.app.database.model.UserAddress;
+import com.happidreampets.app.database.model.User.USER_ROLE;
 import com.happidreampets.app.database.repository.UserRepository;
-import com.happidreampets.app.database.utils.DbFilter;
-import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
 
 @Component
 public class UserCRUD {
@@ -29,78 +28,36 @@ public class UserCRUD {
     @Autowired
     private UserRepository userRepository;
 
-    private DbFilter dbFilter;
+    private static final String EMAIL_PATTERN = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+    private static final Pattern pattern = Pattern.compile(EMAIL_PATTERN);
 
-    public DbFilter getDbFilter() {
-        return dbFilter;
+    public boolean authenticateUserBasedOnEmailAndPassword(String email, String password) {
+        User user = userRepository.findByEmailAndPassword(email, password);
+        return user != null;
     }
 
-    public void setDbFilter(DbFilter dbFilter) {
-        this.dbFilter = dbFilter;
+    public User getUserBasedOnEmailAndPassword(String email, String password) {
+        User user = userRepository.findByEmailAndPassword(email, password);
+        return user;
     }
 
-    private USERCOLUMN checkAndGetColumnName() {
-        if (dbFilter != null) {
-            if (EnumUtils.isValidEnum(USERCOLUMN.class, dbFilter.getSortColumn().toString())) {
-                USERCOLUMN enumValue = USERCOLUMN.valueOf(dbFilter.getSortColumn().toString());
-                return enumValue;
-            }
-        }
-        return null;
+    public User getUserBasedOnEmail(String email) {
+        User user = userRepository.findByEmail(email);
+        return user;
     }
 
-    private JSONObject getDataInRequiredFormat(Iterable<User> data) {
-        JSONObject responseData = new JSONObject();
-        responseData.put(ProductConstants.LowerCase.DATA, JSONObject.NULL);
-        if (getDbFilter() != null) {
-            if (getDbFilter().getFormat().equals(DATAFORMAT.JSON)) {
-                JSONArray responseArray = new JSONArray();
-                data.forEach(row -> {
-                    responseArray.put(row.toJSON());
-                });
-                responseData.put(ProductConstants.LowerCase.DATA, responseArray);
-            } else if (getDbFilter().getFormat().equals(DATAFORMAT.POJO)) {
-                List<User> responseList = new ArrayList<>();
-                data.forEach(responseList::add);
-                responseData.put(ProductConstants.LowerCase.DATA, responseList);
-            }
-        } else {
-            List<User> responseList = new ArrayList<>();
-            data.forEach(responseList::add);
-            responseData.put(ProductConstants.LowerCase.DATA, responseList);
-        }
-
-        return responseData;
+    public User getUserBasedOnId(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        return user;
     }
 
-    private JSONObject getPageData(Page<User> userPage) {
-        JSONObject pageData = new JSONObject();
-        pageData.put(ProductConstants.LowerCase.PAGE, userPage.getNumber() + 1);
-        pageData.put(ProductConstants.SnakeCase.PER_PAGE, userPage.getSize());
-        pageData.put(ProductConstants.LowerCase.COUNT, userPage.getContent().size());
-        pageData.put(ProductConstants.SnakeCase.MORE_RECORDS, userPage.hasNext());
-        return pageData;
-    }
-
-    public JSONObject getUserDetails() {
-        JSONObject userData = new JSONObject();
-        Sort sort = null;
-        if (getDbFilter() != null && checkAndGetColumnName() != null) {
-            sort = Sort.by(getDbFilter().getSortDirection(), checkAndGetColumnName().getColumnName());
-        }
-        Integer startIndex = getDbFilter() != null ? getDbFilter().getStartIndex() : 0;
-        Integer limit = getDbFilter() != null ? getDbFilter().getLimitIndex() : 0;
-        Pageable pageable = sort != null ? PageRequest.of(startIndex, limit, sort) : PageRequest.of(startIndex, limit);
-        Page<User> userPage = userRepository.findAll(pageable);
-        Iterable<User> userIterable = userPage.getContent();
-        userData.put(ProductConstants.LowerCase.DATA,
-                getDataInRequiredFormat(userIterable).get(ProductConstants.LowerCase.DATA));
-        userData.put(ProductConstants.LowerCase.INFO, getPageData(userPage));
-        return userData;
+    public User createUser(String name, String password, String email, String phone_number, USER_ROLE role)
+            throws Exception {
+        return createUser(name, password, email, "91", phone_number, null, role);
     }
 
     public User createUser(String name, String password, String email, String phone_extension, String phone_number,
-            String address, String city, String state, String country, String pincode) throws Exception {
+            UserAddress defaultAddress, USER_ROLE role) throws Exception {
         User user = new User();
         if (name == null || password == null || email == null) {
             throw new Exception(
@@ -115,39 +72,41 @@ public class UserCRUD {
             user.setPhone_extension(phone_extension);
             user.setPhone_number(phone_number);
         }
-        if (address != null && city != null && state != null && country != null && pincode != null) {
-            user.setAddress(address);
-            user.setCity(city);
-            user.setState(state);
-            user.setCountry(country);
-            user.setPincode(pincode);
+        if (defaultAddress != null) {
+            user.setDefaultAddress(defaultAddress);
         }
+        user.setRole(role);
         return userRepository.save(user);
     }
 
     public User updateUserName(Long id, String name) throws Exception {
-        return updateUser(id, name, null, null, null, null, null, null, null, null, null);
+        return updateUser(id, name, null, null, null, null, null);
     }
 
     public User updateUserPassword(Long id, String password) throws Exception {
-        return updateUser(id, null, password, null, null, null, null, null, null, null, null);
+        return updateUser(id, null, password, null, null, null, null);
     }
 
     public User updateUserPhoneNumber(Long id, String phone_extension, String phone_number) throws Exception {
-        return updateUser(id, null, null, null, phone_extension, phone_number, null, null, null, null, null);
+        return updateUser(id, null, null, null, phone_extension, phone_number, null);
     }
 
-    public User updateUserAddress(Long id, String address, String city, String state, String country, String pincode)
-            throws Exception {
-        return updateUser(id, null, null, null, null, null, address, city, state, country, pincode);
+    public User updateUserDefaultAddress(Long id, UserAddress defaultAddress) throws Exception {
+        if (null == defaultAddress) {
+            throw new Exception(UserAddressConstants.ExceptionMessageCase.INVALID_USER_ADDRESS_ID);
+        }
+        if (defaultAddress.getId() != id) {
+            throw new Exception(UserAddressConstants.ExceptionMessageCase.INVALID_USER_ADDRESS_ID);
+        }
+        return updateUser(id, null, null, null, null, null, defaultAddress);
     }
 
     public User updateUser(Long id, String name, String password, String email, String phone_extension,
-            String phone_number, String address, String city, String state, String country, String pincode)
+            String phone_number, UserAddress defaultAddress)
             throws Exception {
         User user = userRepository.findById(id).orElse(null);
         if (null == user) {
-            throw new Exception(ExceptionMessageCase.USER_NOT_FOUND);
+            throw new Exception(ExceptionMessageCase.INVALID_USER_ID);
         }
         if (name != null) {
             user.setName(name);
@@ -158,24 +117,32 @@ public class UserCRUD {
         if (email != null) {
             user.setEmail(email);
         }
-        if (phone_extension != null && phone_number != null) {
+        if (phone_extension != null) {
             user.setPhone_extension(phone_extension);
+
+        }
+        if (phone_number != null) {
             user.setPhone_number(phone_number);
         }
-        if (address != null && city != null && state != null && country != null && pincode != null) {
-            user.setAddress(address);
-            user.setCity(city);
-            user.setState(state);
-            user.setCountry(country);
-            user.setPincode(pincode);
+        if (defaultAddress != null) {
+            user.setDefaultAddress(defaultAddress);
         }
+        return userRepository.save(user);
+    }
+
+    public User updateDefaultAddressToNull(Long id) throws Exception {
+        User user = userRepository.findById(id).orElse(null);
+        if (null == user) {
+            throw new Exception(ExceptionMessageCase.INVALID_USER_ID);
+        }
+        user.setDefaultAddress(null);
         return userRepository.save(user);
     }
 
     public Boolean deleteUserById(Long id) throws Exception {
         User user = userRepository.findById(id).orElse(null);
         if (null == user) {
-            throw new Exception(ExceptionMessageCase.USER_NOT_FOUND);
+            throw new Exception(ExceptionMessageCase.INVALID_USER_ID);
         }
         userRepository.deleteById(id);
         return true;
@@ -190,5 +157,119 @@ public class UserCRUD {
             userRepository.delete(user);
         }
         return true;
+    }
+
+    public JSONObject checkBodyOfAuthenticateUser(JSONObject body) {
+        JSONObject response = new JSONObject();
+        Boolean isSuccess = Boolean.FALSE;
+        String missingField = ProductConstants.LowerCase.EMPTY_QUOTES;
+        String message = ProductConstants.MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
+        String code = ERROR_CODES.MANDATORY_MISSING.name();
+        if (!body.has(LowerCase.EMAIL)) {
+            missingField = LowerCase.EMAIL;
+            message = message.replace(ProductConstants.LoggerCase.ARG0, LowerCase.EMAIL);
+        } else if (!body.has(LowerCase.PASSWORD)) {
+            missingField = LowerCase.PASSWORD;
+            message = message.replace(ProductConstants.LoggerCase.ARG0, LowerCase.PASSWORD);
+        } else {
+            String email = body.get(LowerCase.EMAIL).toString();
+            Matcher matcher = pattern.matcher(email);
+            Boolean isValidEmail = matcher.matches();
+            if (!isValidEmail) {
+                code = null;
+                message = MessageCase.INVALID_EMAIL_FORMAT;
+                missingField = LowerCase.EMAIL;
+            } else {
+                isSuccess = Boolean.TRUE;
+            }
+        }
+        response.put(ProductConstants.LowerCase.SUCCESS, isSuccess);
+        if (!isSuccess) {
+            response.put(ProductConstants.LowerCase.DATA,
+                    new JSONObject().put(ProductConstants.LowerCase.FIELD, missingField)
+                            .put(ProductConstants.LowerCase.CODE, code)
+                            .put(ProductConstants.LowerCase.MESSAGE, message));
+        }
+        return response;
+    }
+
+    public JSONObject checkBodyOfRegisterUser(JSONObject body) {
+        JSONObject response = new JSONObject();
+        Boolean isSuccess = Boolean.FALSE;
+        String missingField = ProductConstants.LowerCase.EMPTY_QUOTES;
+        String message = ProductConstants.MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
+        String code = ERROR_CODES.MANDATORY_MISSING.name();
+        if (!body.has(LowerCase.EMAIL)) {
+            missingField = LowerCase.EMAIL;
+            message = message.replace(ProductConstants.LoggerCase.ARG0, LowerCase.EMAIL);
+        } else if (!body.has(LowerCase.PASSWORD)) {
+            missingField = LowerCase.PASSWORD;
+            message = message.replace(ProductConstants.LoggerCase.ARG0, LowerCase.PASSWORD);
+        } else if (!body.has(LowerCase.NAME)) {
+            missingField = LowerCase.NAME;
+            message = message.replace(ProductConstants.LoggerCase.ARG0, LowerCase.NAME);
+        } else if (!body.has(SnakeCase.PHONE_NUMBER)) {
+            missingField = SnakeCase.PHONE_NUMBER;
+            message = message.replace(ProductConstants.LoggerCase.ARG0, SnakeCase.PHONE_NUMBER);
+        } else {
+            String email = body.get(LowerCase.EMAIL).toString();
+            Matcher matcher = pattern.matcher(email);
+            Boolean isValidEmail = matcher.matches();
+            if (!isValidEmail) {
+                code = null;
+                message = MessageCase.INVALID_EMAIL_FORMAT;
+                missingField = LowerCase.EMAIL;
+            } else {
+                isSuccess = Boolean.TRUE;
+            }
+        }
+        response.put(ProductConstants.LowerCase.SUCCESS, isSuccess);
+        if (!isSuccess) {
+            response.put(ProductConstants.LowerCase.DATA,
+                    new JSONObject().put(ProductConstants.LowerCase.FIELD, missingField)
+                            .put(ProductConstants.LowerCase.CODE, code)
+                            .put(ProductConstants.LowerCase.MESSAGE, message));
+        }
+        return response;
+    }
+
+    public JSONObject checkBodyOfUpdateUser(JSONObject body, User user) {
+        JSONObject response = new JSONObject();
+        Boolean isSuccess = Boolean.FALSE;
+        String missingField = ProductConstants.LowerCase.EMPTY_QUOTES;
+        String message = ProductConstants.MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
+        String code = ERROR_CODES.MANDATORY_MISSING.name();
+        if (body.has(SnakeCase.OLD_PASSWORD)) {
+            if (!body.has(SnakeCase.NEW_PASSWORD)) {
+                missingField = SnakeCase.NEW_PASSWORD;
+                message = message.replace(ProductConstants.LoggerCase.ARG0, SnakeCase.NEW_PASSWORD);
+            } else {
+                String existingPassword = user.getPassword();
+                if (!existingPassword.equals(body.get(SnakeCase.OLD_PASSWORD).toString())) {
+                    code = null;
+                    message = MessageCase.INVALID_OLD_PASSWORD;
+                    missingField = SnakeCase.OLD_PASSWORD;
+                } else {
+                    isSuccess = Boolean.TRUE;
+                }
+            }
+        } else if (body.has(SnakeCase.NEW_PASSWORD)) {
+            if (!body.has(SnakeCase.OLD_PASSWORD)) {
+                missingField = SnakeCase.OLD_PASSWORD;
+                message = message.replace(ProductConstants.LoggerCase.ARG0, SnakeCase.OLD_PASSWORD);
+            } else {
+                isSuccess = Boolean.TRUE;
+            }
+        } else {
+            isSuccess = Boolean.TRUE;
+        }
+        response.put(ProductConstants.LowerCase.SUCCESS, isSuccess);
+        if (!isSuccess) {
+            response.put(ProductConstants.LowerCase.DATA,
+                    new JSONObject().put(ProductConstants.LowerCase.FIELD, missingField)
+                            .put(ProductConstants.LowerCase.CODE, code)
+                            .put(ProductConstants.LowerCase.MESSAGE, message));
+        }
+        return response;
     }
 }

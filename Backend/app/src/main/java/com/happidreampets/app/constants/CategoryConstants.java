@@ -38,6 +38,8 @@ public class CategoryConstants {
         public static final String INVALID_CATEGORY_ID = "Invalid Category Id";
         public static final String MAXIMUM_IMAGES_FOR_CATEGORY_REACHED = "Maximum Images for Category Reached";
         public static final String ANIMAL_ASSOCIATION_INVALID = "Category must be associated to a valid Animal";
+        public static final String MISSING_CATEGORY_FIELD_FOR_CREATE = "Missing Category Field For Create";
+        public static final String NO_IMAGE_PRESENT_FOR_CATEGORY = "No Image Present For Category";
     }
 
     public class OtherCase {

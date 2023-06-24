@@ -7,14 +7,11 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartException;
@@ -23,8 +20,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.happidreampets.app.constants.ControllerConstants.LowerCase;
 import com.happidreampets.app.constants.AnimalConstants;
 import com.happidreampets.app.constants.CategoryConstants;
+import com.happidreampets.app.constants.ControllerConstants;
 import com.happidreampets.app.constants.ProductConstants;
-import com.happidreampets.app.constants.TopProductsConstants.ExceptionMessageCase;
+import com.happidreampets.app.constants.TopCategoriesConstants;
+import com.happidreampets.app.constants.TopProductsConstants;
 import com.happidreampets.app.constants.TopProductsConstants.SnakeCase;
 import com.happidreampets.app.database.crud.AnimalCRUD;
 import com.happidreampets.app.database.crud.CategoryCRUD;
@@ -46,6 +45,15 @@ public class OtherDataController extends APIController {
 
     private Animal currentAnimal;
     private Category currentCategory;
+    private Product currentProduct;
+
+    public Product getCurrentProduct() {
+        return currentProduct;
+    }
+
+    public void setCurrentProduct(Product currentProduct) {
+        this.currentProduct = currentProduct;
+    }
 
     public Animal getCurrentAnimal() {
         return currentAnimal;
@@ -71,7 +79,7 @@ public class OtherDataController extends APIController {
         return failureResponse.getResponse();
     }
 
-    @GetMapping("/top-products")
+    @RequestMapping(value = "/top-products", method = RequestMethod.GET)
     public ResponseEntity<String> getTopProducts() {
         try {
             TopProductsCRUD topProductsCRUD = getTopProductsCRUD();
@@ -92,7 +100,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @GetMapping("/top-product/{topProductId}")
+    @RequestMapping(value = "/top-product/{topProductId}", method = RequestMethod.GET)
     public ResponseEntity<String> getTopProduct(@PathVariable("topProductId") Long topProductId) {
         try {
             TopProductsCRUD topProductsCRUD = getTopProductsCRUD();
@@ -100,7 +108,7 @@ public class OtherDataController extends APIController {
             SuccessResponse successResponse = new SuccessResponse();
             successResponse.setApiResponseStatus(HttpStatus.OK);
             if (data == null) {
-                successResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
+                throw new Exception(TopProductsConstants.ExceptionMessageCase.INVALID_TOP_PRODUCT_ID);
             } else {
                 successResponse.setData(data);
             }
@@ -112,7 +120,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PostMapping("/top-product")
+    @RequestMapping(value = "/top-product", method = RequestMethod.POST)
     public ResponseEntity<String> addATopProduct(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         JSONObject errorData = new JSONObject();
@@ -122,7 +130,8 @@ public class OtherDataController extends APIController {
             JSONObject validationResult = topProductsCRUD.validateBodyDataForSingleCreate(body);
             if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
-                throw new Exception(ExceptionMessageCase.INVALID_BODY_DATA);
+                throw new Exception(
+                        TopProductsConstants.ExceptionMessageCase.MISSING_FIELD_FOR_TOPPRODUCT_CREATE_SINGLE);
             }
 
             TopProducts data = topProductsCRUD.createTopProducts(
@@ -130,11 +139,11 @@ public class OtherDataController extends APIController {
                             .getProduct(Long.valueOf(body.get(ProductConstants.SnakeCase.PRODUCT_ID).toString())),
                     Integer.parseInt(body.get(SnakeCase.ORDER_NUMBER).toString()));
 
-            successResponse.setApiResponseStatus(HttpStatus.OK);
+            successResponse.setApiResponseStatus(HttpStatus.CREATED);
             if (data == null) {
-                successResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
+                throw new Exception();
             } else {
-                successResponse.setData(data.toJSON());
+                successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, data.getId()));
             }
             return successResponse.getResponse();
         } catch (Exception ex) {
@@ -147,7 +156,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PostMapping("/top-products")
+    @RequestMapping(value = "/top-products", method = RequestMethod.POST)
     public ResponseEntity<String> addTopProducts(@RequestBody List<Map<String, Object>> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         JSONObject errorData = new JSONObject();
@@ -157,19 +166,14 @@ public class OtherDataController extends APIController {
             JSONObject validationResult = topProductsCRUD.validateBodyDataForBulkCreate(body);
             if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
-                throw new Exception(ExceptionMessageCase.INVALID_BODY_DATA);
+                throw new Exception(
+                        TopProductsConstants.ExceptionMessageCase.MISSING_FIELD_FOR_TOPPRODUCT_CREATE_BULK);
             }
 
             topProductsCRUD.clearAndCreateTopProducts(body);
 
-            JSONObject data = topProductsCRUD.getTopProductsDetails();
-
-            successResponse.setApiResponseStatus(HttpStatus.OK);
-            if (data == null) {
-                successResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
-            } else {
-                successResponse.setData(data);
-            }
+            successResponse.setApiResponseStatus(HttpStatus.CREATED);
+            successResponse.setData(new JSONObject());
             return successResponse.getResponse();
         } catch (Exception ex) {
             OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
@@ -181,10 +185,9 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @DeleteMapping("/top-products/{topProductId}")
+    @RequestMapping(value = "/top-product/{topProductId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteTopProduct(@PathVariable("topProductId") Long topProductId) {
         SuccessResponse successResponse = new SuccessResponse();
-        JSONObject errorData = new JSONObject();
         try {
             TopProductsCRUD topProductsCRUD = getTopProductsCRUD();
 
@@ -196,14 +199,11 @@ public class OtherDataController extends APIController {
         } catch (Exception ex) {
             OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
             otherDataControllerExceptions.setException(ex);
-            if (!errorData.isEmpty()) {
-                otherDataControllerExceptions.setData(errorData);
-            }
             return otherDataControllerExceptions.returnResponseBasedOnException();
         }
     }
 
-    @GetMapping("/top-categories")
+    @RequestMapping(value = "/top-categories", method = RequestMethod.GET)
     public ResponseEntity<String> getTopCategories() {
         try {
             TopCategoriesCRUD topCategoriesCRUD = getTopCategoriesCRUD();
@@ -224,7 +224,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @GetMapping("/top-category/{categoryId}")
+    @RequestMapping(value = "/top-category/{categoryId}", method = RequestMethod.GET)
     public ResponseEntity<String> getTopCategoryByCategory() {
         try {
             TopCategoriesCRUD topCategoriesCRUD = getTopCategoriesCRUD();
@@ -232,7 +232,7 @@ public class OtherDataController extends APIController {
             SuccessResponse successResponse = new SuccessResponse();
             successResponse.setApiResponseStatus(HttpStatus.OK);
             if (data == null) {
-                successResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
+                throw new Exception(TopCategoriesConstants.ExceptionMessageCase.CATEGORY_NOT_IN_TOP_CATEGORY);
             } else {
                 successResponse.setData(data);
             }
@@ -244,17 +244,19 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PostMapping("/top-category")
+    @RequestMapping(value = "/top-category", method = RequestMethod.POST)
     public ResponseEntity<String> addATopCategory(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         JSONObject errorData = new JSONObject();
         try {
             JSONObject body = JSONUtils.convertMapToJSONObject(bodyData);
             TopCategoriesCRUD topCategoriesCRUD = getTopCategoriesCRUD();
+            topCategoriesCRUD.setFromController(true);
             JSONObject validationResult = topCategoriesCRUD.validateBodyDataForCreate(body);
             if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
-                throw new Exception(ExceptionMessageCase.INVALID_BODY_DATA);
+                throw new Exception(
+                        TopCategoriesConstants.ExceptionMessageCase.MISSING_FIELD_IN_ADD_CATEGORY_PRODUCTS_TO_TOP_CATEGORY);
             }
 
             List<Long> productIds = topCategoriesCRUD.checkAndFetchBodyToProductIdList(body);
@@ -264,6 +266,18 @@ public class OtherDataController extends APIController {
             successResponse.setApiResponseStatus(HttpStatus.CREATED);
             return successResponse.getResponse();
         } catch (Exception ex) {
+            if (ex.getMessage() != null) {
+                if (ex.getMessage().split(ControllerConstants.SpecialCharacter.UNDERSCORE
+                        + ControllerConstants.CapitalizationCase.BYPASS_EXCEPTION).length >= 2) {
+                    errorData = new JSONObject()
+                            .put(ProductConstants.LowerCase.FIELD,
+                                    ProductConstants.LowerCase.PRODUCTS)
+                            .put(LowerCase.MESSAGE,
+                                    ex.getMessage().split(ControllerConstants.SpecialCharacter.UNDERSCORE
+                                            + ControllerConstants.CapitalizationCase.BYPASS_EXCEPTION)[0]);
+                    ex = new Exception(ProductConstants.ExceptionMessageCase.PRODUCT_OF_ID_ARG0_ALREADY_EXISTS);
+                }
+            }
             OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
             otherDataControllerExceptions.setException(ex);
             if (!errorData.isEmpty()) {
@@ -273,10 +287,9 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @DeleteMapping("/top-category/{categoryId}")
+    @RequestMapping(value = "/top-category/{categoryId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteTopCategory() {
         SuccessResponse successResponse = new SuccessResponse();
-        JSONObject errorData = new JSONObject();
         try {
             TopCategoriesCRUD topCategoryCRUD = getTopCategoriesCRUD();
 
@@ -287,41 +300,28 @@ public class OtherDataController extends APIController {
         } catch (Exception ex) {
             OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
             otherDataControllerExceptions.setException(ex);
-            if (!errorData.isEmpty()) {
-                otherDataControllerExceptions.setData(errorData);
-            }
             return otherDataControllerExceptions.returnResponseBasedOnException();
         }
     }
 
-    @DeleteMapping("/top-category/{categoryId}/product/{productId}")
-    public ResponseEntity<String> deleteTopCategoryBasedOnProduct(@PathVariable("productId") Long productId) {
+    @RequestMapping(value = "/top-category/{categoryId}/product/{productId}", method = RequestMethod.DELETE)
+    public ResponseEntity<String> deleteTopCategoryBasedOnProduct() {
         SuccessResponse successResponse = new SuccessResponse();
-        JSONObject errorData = new JSONObject();
         try {
             TopCategoriesCRUD topCategoryCRUD = getTopCategoriesCRUD();
 
-            Product product = getProductCRUD().getProduct(productId);
-
-            if (product == null) {
-                throw new Exception(ProductConstants.ExceptionMessageCase.PRODUCT_NOT_FOUND);
-            }
-
-            topCategoryCRUD.deleteTopCategoryBasedOnProduct(product);
+            topCategoryCRUD.deleteTopCategoryBasedOnProduct(getCurrentProduct());
 
             successResponse.setApiResponseStatus(HttpStatus.OK);
             return successResponse.getResponse();
         } catch (Exception ex) {
             OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
             otherDataControllerExceptions.setException(ex);
-            if (!errorData.isEmpty()) {
-                otherDataControllerExceptions.setData(errorData);
-            }
             return otherDataControllerExceptions.returnResponseBasedOnException();
         }
     }
 
-    @GetMapping("/animals")
+    @RequestMapping(value = "/animals", method = RequestMethod.GET)
     public ResponseEntity<String> getAnimalsData(
             @RequestParam(value = ProductConstants.LowerCase.PAGE, defaultValue = "1") Integer page,
             @RequestParam(value = ProductConstants.SnakeCase.PER_PAGE, defaultValue = "6") Integer per_page) {
@@ -357,7 +357,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @GetMapping("/animal/{animalId}")
+    @RequestMapping(value = "/animal/{animalId}", method = RequestMethod.GET)
     public ResponseEntity<String> getAnimal() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
@@ -384,7 +384,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PostMapping("/animal")
+    @RequestMapping(value = "/animal", method = RequestMethod.POST)
     public ResponseEntity<String> createAnimal(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         JSONObject errorData = new JSONObject();
@@ -395,7 +395,7 @@ public class OtherDataController extends APIController {
             JSONObject validationResult = animalCRUD.checkBodyOfCreateAnimal(body);
             if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
-                throw new Exception(ProductConstants.ExceptionMessageCase.MISSING_PRODUCT_FIELD_FOR_CREATE);
+                throw new Exception(AnimalConstants.ExceptionMessageCase.MISSING_ANIMAL_FIELD_FOR_CREATE);
             }
             Animal animal = animalCRUD.createAnimal(body.get(ProductConstants.LowerCase.NAME).toString(),
                     body.get(ProductConstants.LowerCase.DESCRIPTION).toString());
@@ -403,7 +403,7 @@ public class OtherDataController extends APIController {
             if (animal == null) {
                 throw new Exception();
             } else {
-                successResponse.setApiResponseStatus(HttpStatus.OK);
+                successResponse.setApiResponseStatus(HttpStatus.CREATED);
             }
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, animal.getId()));
             return successResponse.getResponse();
@@ -417,7 +417,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PutMapping("/animal/{animalId}")
+    @RequestMapping(value = "/animal/{animalId}", method = RequestMethod.PUT)
     public ResponseEntity<String> updateAnimal(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         try {
@@ -444,7 +444,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PostMapping("/animal/{animalId}/image")
+    @RequestMapping(value = "/animal/{animalId}/image", method = RequestMethod.POST)
     public ResponseEntity<String> addAnimalImage(
             @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile animalImage) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -458,7 +458,7 @@ public class OtherDataController extends APIController {
                     animalCRUD.getExtension(originalFilename));
 
             successResponse = new SuccessResponse();
-            successResponse.setApiResponseStatus(HttpStatus.OK);
+            successResponse.setApiResponseStatus(HttpStatus.CREATED);
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, currentAnimal.getId()));
             return successResponse.getResponse();
         } catch (Exception ex) {
@@ -468,7 +468,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @DeleteMapping("/animal/{animalId}/image")
+    @RequestMapping(value = "/animal/{animalId}/image", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteAnimalImage() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
@@ -486,7 +486,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @GetMapping("/animal/{animalId}/categories")
+    @RequestMapping(value = "/animal/{animalId}/categories", method = RequestMethod.GET)
     public ResponseEntity<String> getCategoriesData(
             @RequestParam(value = ProductConstants.LowerCase.PAGE, defaultValue = "1") Integer page,
             @RequestParam(value = ProductConstants.SnakeCase.PER_PAGE, defaultValue = "6") Integer per_page) {
@@ -522,7 +522,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @GetMapping("/animal/{animalId}/category/{categoryId}")
+    @RequestMapping(value = "/animal/{animalId}/category/{categoryId}", method = RequestMethod.GET)
     public ResponseEntity<String> getCategory() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
@@ -549,7 +549,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PostMapping("/animal/{animalId}/category")
+    @RequestMapping(value = "/animal/{animalId}/category", method = RequestMethod.POST)
     public ResponseEntity<String> createCategory(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         JSONObject errorData = new JSONObject();
@@ -568,7 +568,7 @@ public class OtherDataController extends APIController {
             if (category == null) {
                 throw new Exception();
             } else {
-                successResponse.setApiResponseStatus(HttpStatus.OK);
+                successResponse.setApiResponseStatus(HttpStatus.CREATED);
             }
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, category.getId()));
             return successResponse.getResponse();
@@ -582,7 +582,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PutMapping("/animal/{animalId}/category/{categoryId}")
+    @RequestMapping(value = "/animal/{animalId}/category/{categoryId}", method = RequestMethod.PUT)
     public ResponseEntity<String> updateCategory(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         try {
@@ -611,7 +611,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @PostMapping("/animal/{animalId}/category/{categoryId}/image")
+    @RequestMapping(value = "/animal/{animalId}/category/{categoryId}/image", method = RequestMethod.POST)
     public ResponseEntity<String> addCategoryImage(
             @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile categoryImage) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -625,7 +625,7 @@ public class OtherDataController extends APIController {
                     categoryCRUD.getExtension(originalFilename));
 
             successResponse = new SuccessResponse();
-            successResponse.setApiResponseStatus(HttpStatus.OK);
+            successResponse.setApiResponseStatus(HttpStatus.CREATED);
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, currentCategory.getId()));
             return successResponse.getResponse();
         } catch (Exception ex) {
@@ -635,7 +635,7 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @DeleteMapping("/animal/{animalId}/category/{categoryId}/image")
+    @RequestMapping(value = "/animal/{animalId}/category/{categoryId}/image", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteCategoryImage() {
         SuccessResponse successResponse = new SuccessResponse();
         try {

@@ -47,19 +47,20 @@ public class Product {
         DETAILS("details"),
         COLOR("color"),
         SIZE("size"),
-        WEIGHTUNITS("weightUnits"),
+        WEIGHT_UNIT("weight_unit"),
         WEIGHT("weight"),
         STOCKS("stocks"),
         PRICE("price"),
-        ISVISIBLE("isVisible"),
+        IS_VISIBLE("is_visible"),
         VARIANT_SIZE_ID("variant_size_id"),
         VARIANT_COLOR_ID("variant_color_id"),
         VARIANT_WEIGHT_ID("variant_weight_id"),
         CATEGORY_ID("category_id"),
-        TOBEDELETED("toBeDeleted"),
-        THUMBNAILIMAGEURL("thumbnailImageUrl"),
-        IMAGEURLS("imageUrls"),
-        ADDEDTIME("addedTime");
+        TO_BE_DELETED("to_be_deleted"),
+        TO_BE_DELETED_STATUSCHANGETIME("to_be_deleted_statusChangeTime"),
+        THUMBNAIL_IMAGE_URL("thumbnail_image_url"),
+        IMAGE_URLS("image_urls"),
+        ADDED_TIME("added_time");
 
         private final String columnName;
 
@@ -74,33 +75,68 @@ public class Product {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Long id;
+
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "description")
     private String description;
+
+    @Column(name = "details")
     private String details;
+
+    @Column(name = "color")
     private String color;
+
+    @Column(name = "size")
     private String size;
-    @Column(name = "weightUnit")
+
+    @Column(name = "weight_unit")
     @Convert(converter = WeightUnitConverter.class)
     private WEIGHT_UNITS weightUnits;
+
+    @Column(name = "weight")
     private Integer weight;
+
+    @Column(name = "stocks")
     private Long stocks;
+
+    @Column(name = "price")
     private Long price;
+
+    @Column(name = "is_visible")
     private Boolean isVisible;
+
+    @Column(name = "variant_size_id")
     private Long variantSizeId;
+
+    @Column(name = "variant_color_id")
     private Long variantColorId;
+
+    @Column(name = "variant_weight_id")
     private Long variantWeightId;
 
     @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
-    private Boolean toBeDeleted;
+
+    @Column(name = "to_be_deleted")
+    private Boolean toBeDeleted = Boolean.FALSE;
+
+    @Column(name = "to_be_deleted_statusChangeTime")
     private Long toBeDeletedStatusChangeTime;
 
+    @Column(name = "thumbnail_image_url")
     @Convert(converter = ProductImageConverter.class)
     private ProductImage thumbnailImageUrl;
+
+    @Column(name = "image_urls")
     @Convert(converter = ProductImageConverter.class)
     private List<ProductImage> imageUrls;
+
+    @Column(name = "added_time")
     private Long addedTime;
 
     public Product() {

@@ -40,6 +40,7 @@ import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
 @Component
 public class ProductCRUD {
 
+    @Value("${products.image.size}")
     Integer productImagesSize;
 
     public static final String PRODUCTS_IMAGE_LOCATION_FULL = System.getProperty(OtherCase.USER_DOT_DIR)
@@ -49,10 +50,6 @@ public class ProductCRUD {
             + "/src/main/resources";
     public static final String PRODUCTS_IMAGE_LOCATION_FROM_STATIC = LowerCase.STATIC + SpecialCharacter.SLASH
             + LowerCase.PRODUCTS;
-
-    public ProductCRUD(@Value("${products.image.size}") Integer productImagesSize) {
-        this.productImagesSize = productImagesSize;
-    }
 
     @Autowired
     private ProductRepository productRepository;
@@ -279,6 +276,7 @@ public class ProductCRUD {
         }
         for (Product product : products) {
             product.setToBeDeleted(true);
+            product.setToBeDeletedStatusChangeTime(System.currentTimeMillis());
             productRepository.save(product);
         }
         return true;
@@ -290,6 +288,7 @@ public class ProductCRUD {
             throw new Exception(ExceptionMessageCase.PRODUCT_NOT_FOUND);
         }
         product.setToBeDeleted(true);
+        product.setToBeDeletedStatusChangeTime(System.currentTimeMillis());
         productRepository.save(product);
         return true;
     }

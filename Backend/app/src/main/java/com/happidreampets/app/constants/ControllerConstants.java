@@ -26,7 +26,7 @@ public class ControllerConstants {
     }
 
     public class CapitalizationCase {
-
+        public static final String BYPASS_EXCEPTION = "ByPassException";
     }
 
     public class MessageCase {
@@ -35,7 +35,7 @@ public class ControllerConstants {
     }
 
     public class SpecialCharacter {
-
+        public static final String UNDERSCORE = "_";
     }
 
     public class ExceptionMessageCase {
