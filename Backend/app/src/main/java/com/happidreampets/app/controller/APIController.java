@@ -779,7 +779,6 @@ public class APIController {
                             .put(ControllerConstants.LowerCase.REASON,
                                     ControllerConstants.SnakeCase.INVALID_CREDENTIALS));
                     return failureResponse.throwInvalidCredentials();
-
                 case UserAddressConstants.MessageCase.ADDRESS_COUNT_FOR_USER_IS_MAXIMUM:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse

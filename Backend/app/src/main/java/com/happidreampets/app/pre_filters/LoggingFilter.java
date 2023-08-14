@@ -51,5 +51,4 @@ public class LoggingFilter implements Filter {
     @Override
     public void destroy() {
     }
-
 }
