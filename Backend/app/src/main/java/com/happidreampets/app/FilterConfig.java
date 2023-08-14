@@ -1,6 +1,5 @@
 package com.happidreampets.app;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.boot.web.servlet.FilterRegistrationBean;

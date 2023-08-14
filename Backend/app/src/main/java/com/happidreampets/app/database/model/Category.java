@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.json.JSONObject;
 
-import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.database.utils.AnimalOrCategoryImageConverter;
 
 import jakarta.persistence.Column;

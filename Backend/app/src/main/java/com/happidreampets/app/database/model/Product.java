@@ -2,12 +2,9 @@ package com.happidreampets.app.database.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
-import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.database.utils.ProductImageConverter;
 import com.happidreampets.app.database.utils.WeightUnitConverter;
 
