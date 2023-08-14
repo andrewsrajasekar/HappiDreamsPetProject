@@ -39,7 +39,7 @@ const MainPageCarousel = ({isPopUp, prePopulateImages}) => {
         };
   
         const getWidth = () => {
-          return document.getElementById("topProducts").offsetWidth;
+          return document.getElementById("topProducts") == null ? window.innerWidth : document.getElementById("topProducts").offsetWidth;
         }
   
     

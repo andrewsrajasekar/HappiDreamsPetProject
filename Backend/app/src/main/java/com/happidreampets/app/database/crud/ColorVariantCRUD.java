@@ -106,6 +106,7 @@ public class ColorVariantCRUD {
         ColorVariant colorVariant = new ColorVariant();
         colorVariant.setProduct(product);
         colorVariant.setVariantId(variantId);
+        colorVariant.setAddedTime(System.currentTimeMillis());
 
         return colorVariantRepository.save(colorVariant);
     }

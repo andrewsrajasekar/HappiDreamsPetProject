@@ -19,6 +19,8 @@ public class InternalAuthenticationToken {
         TOKEN("token"),
         USER_ID("user_id"),
         EXPIRING_TIME("expiring_time"),
+        CREATED_TIME("created_time"),
+        UPDATED_TIME("updated_time"),
         ADDED_TIME("added_time");
 
         private final String columnName;
@@ -49,6 +51,9 @@ public class InternalAuthenticationToken {
 
     @Column(name = "created_time")
     private Long createdTime;
+
+    @Column(name = "updated_time")
+    private Long updatedTime;
 
     @Column(name = "added_time")
     private Long addedTime;
@@ -90,6 +95,14 @@ public class InternalAuthenticationToken {
 
     public void setCreatedTime(Long createdTime) {
         this.createdTime = createdTime;
+    }
+
+    public Long getUpdatedTime() {
+        return updatedTime;
+    }
+
+    public void setUpdatedTime(Long updatedTime) {
+        this.updatedTime = updatedTime;
     }
 
     public Long getAddedTime() {

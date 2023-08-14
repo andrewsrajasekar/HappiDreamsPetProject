@@ -17,10 +17,10 @@ public class InternalAuthenticationTokenCRUD {
     @Autowired
     private InternalAuthenticationTokenRepository internalAuthenticationTokenRepository;
 
-    @Value("${happidreampets.app.jwtSecret}")
+    @Value("${happidreampets.app.internal.jwtSecret}")
     private String jwtSecret;
 
-    @Value("${happidreampets.app.jwtExpirationMs}")
+    @Value("${happidreampets.app.internal.jwtExpirationMs}")
     private int jwtExpirationMs;
 
     public InternalAuthenticationToken getInternalAuthenticationTokenOfUser(User user) {
@@ -36,11 +36,22 @@ public class InternalAuthenticationTokenCRUD {
         if (tokenDetails == null || tokenDetails.isEmpty() || !tokenDetails.has(UserConstants.SnakeCase.ACCESS_TOKEN)) {
             throw new Exception();
         }
+        Long currentTime = System.currentTimeMillis();
         InternalAuthenticationToken internalAuthenticationToken = new InternalAuthenticationToken();
         internalAuthenticationToken.setExpiringTime(tokenDetails.getLong(UserConstants.SnakeCase.EXPIRATION_TIME));
         internalAuthenticationToken.setCreatedTime(tokenDetails.getLong(UserConstants.SnakeCase.CREATED_TIME));
         internalAuthenticationToken.setToken(tokenDetails.get(UserConstants.SnakeCase.ACCESS_TOKEN).toString());
+        internalAuthenticationToken.setAddedTime(currentTime);
+        internalAuthenticationToken.setUpdatedTime(currentTime);
         internalAuthenticationToken.setUser(user);
+        return internalAuthenticationTokenRepository.save(internalAuthenticationToken);
+    }
+
+    public InternalAuthenticationToken updateInternalAuthenticationToken(
+            InternalAuthenticationToken internalAuthenticationToken, Long expirationTime)
+            throws Exception {
+        internalAuthenticationToken.setExpiringTime(expirationTime);
+        internalAuthenticationToken.setUpdatedTime(System.currentTimeMillis());
         return internalAuthenticationTokenRepository.save(internalAuthenticationToken);
     }
 

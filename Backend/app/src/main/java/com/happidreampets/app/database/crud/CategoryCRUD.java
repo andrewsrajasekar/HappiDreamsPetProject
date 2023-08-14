@@ -27,6 +27,7 @@ import com.happidreampets.app.constants.ProductConstants.SpecialCharacter;
 import com.happidreampets.app.controller.APIController.ERROR_CODES;
 import com.happidreampets.app.constants.CategoryConstants.ExceptionMessageCase;
 import com.happidreampets.app.database.model.Animal;
+import com.happidreampets.app.database.model.AnimalOrCategoryImage;
 import com.happidreampets.app.database.model.Category;
 import com.happidreampets.app.database.model.Category.CATEGORYCOLUMN;
 import com.happidreampets.app.database.repository.CategoryRepository;
@@ -79,7 +80,7 @@ public class CategoryCRUD {
             if (getDbFilter().getFormat().equals(DATAFORMAT.JSON)) {
                 JSONArray responseArray = new JSONArray();
                 data.forEach(row -> {
-                    responseArray.put(row.toJSON());
+                    responseArray.put(row.toJSON(Boolean.TRUE, Boolean.TRUE));
                 });
                 responseData.put(ProductConstants.LowerCase.DATA, responseArray);
             } else if (getDbFilter().getFormat().equals(DATAFORMAT.POJO)) {
@@ -102,7 +103,22 @@ public class CategoryCRUD {
         pageData.put(ProductConstants.SnakeCase.PER_PAGE, categoryPage.getSize());
         pageData.put(ProductConstants.LowerCase.COUNT, categoryPage.getContent().size());
         pageData.put(ProductConstants.SnakeCase.MORE_RECORDS, categoryPage.hasNext());
+        pageData.put(ProductConstants.SnakeCase.TOTAL_RECORDS, categoryPage.getTotalElements());
         return pageData;
+    }
+
+    public JSONObject getAllCategories(Animal animal) {
+        JSONObject categories = new JSONObject();
+        Sort sort = null;
+        if (getDbFilter() != null && checkAndGetColumnName() != null) {
+            sort = Sort.by(getDbFilter().getSortDirection(), checkAndGetColumnName().getColumnName());
+        }
+        List<Category> categoryData = sort != null
+                ? categoryRepository.findAllByAnimalAndToBeDeletedIsFalse(animal, sort)
+                : categoryRepository.findAllByAnimalAndToBeDeletedIsFalse(animal);
+        categories.put(ProductConstants.LowerCase.DATA,
+                getDataInRequiredFormat(categoryData).get(ProductConstants.LowerCase.DATA));
+        return categories;
     }
 
     public JSONObject getCategoryDetails(Animal animal) {
@@ -122,11 +138,11 @@ public class CategoryCRUD {
         return categoryData;
     }
 
-    public Category getCategoryDetail(Long id) {
-        return categoryRepository.findByIdAndToBeDeletedIsFalse(id);
+    public Category getCategoryDetail(Animal animal, Long id) {
+        return categoryRepository.findByAnimalAndIdAndToBeDeletedIsFalse(animal, id);
     }
 
-    public Category createCategory(String name, String description, String image, Animal animal) throws Exception {
+    public Category createCategory(String name, String description, Animal animal) throws Exception {
         Category category = new Category();
         if (name == null) {
             throw new Exception(ProductConstants.ExceptionMessageCase.NAME_CANNOT_BE_EMPTY);
@@ -136,10 +152,8 @@ public class CategoryCRUD {
         }
         category.setName(name);
         category.setDescription(description);
-        if (image != null) {
-            category.setImage(image);
-        }
         category.setAnimal(animal);
+        category.setAddedTime(System.currentTimeMillis());
         return categoryRepository.save(category);
     }
 
@@ -165,7 +179,7 @@ public class CategoryCRUD {
         return categoryRepository.save(category);
     }
 
-    public Category updateCategory(Long id, String name, String description, String image, Animal animal)
+    public Category updateCategory(Long id, String name, String description, Animal animal)
             throws Exception {
         Category category = categoryRepository.findByIdAndToBeDeletedIsFalse(id);
         if (null == category) {
@@ -175,9 +189,6 @@ public class CategoryCRUD {
             category.setName(name);
         }
         category.setDescription(description);
-        if (image != null) {
-            category.setImage(image);
-        }
         if (animal != null) {
             category.setAnimal(animal);
         }
@@ -246,9 +257,21 @@ public class CategoryCRUD {
         return fileFullName.substring(fileFullName.lastIndexOf(ProductConstants.SpecialCharacter.DOT) + 1);
     }
 
+    public void addImageUrlToCategory(Category category, String imageUrl) throws Exception {
+        AnimalOrCategoryImage existingImage = category.getImage();
+        if (existingImage != null) {
+            throw new Exception(ExceptionMessageCase.MAXIMUM_IMAGES_FOR_CATEGORY_REACHED);
+        }
+        existingImage = new AnimalOrCategoryImage();
+        existingImage.setImageUrl(imageUrl);
+        existingImage.setImageType("external_url");
+        category.setImage(existingImage);
+        categoryRepository.save(category);
+    }
+
     public void addImageToCategory(Category category, InputStream image, String extension) throws Exception {
         String CATEGORY_IMAGE_FOLDER = CATEGORY_IMAGE_LOCATION_FULL;
-        String existingImage = category.getImage();
+        AnimalOrCategoryImage existingImage = category.getImage();
         if (existingImage != null) {
             throw new Exception(ExceptionMessageCase.MAXIMUM_IMAGES_FOR_CATEGORY_REACHED);
         }
@@ -256,21 +279,25 @@ public class CategoryCRUD {
                 CATEGORY_IMAGE_FOLDER + ProductConstants.SpecialCharacter.SLASH
                         + getFileName(category, extension));
         addImageToServer(image, path);
-        existingImage = CATEGORY_IMAGE_LOCATION_FROM_STATIC + ProductConstants.SpecialCharacter.SLASH
-                + getFileName(category, extension);
+        existingImage = new AnimalOrCategoryImage();
+        existingImage.setImageUrl(CATEGORY_IMAGE_LOCATION_FROM_STATIC + ProductConstants.SpecialCharacter.SLASH
+                + getFileName(category, extension));
+        existingImage.setImageType("file");
         category.setImage(existingImage);
         categoryRepository.save(category);
     }
 
     public void deleteImageFromCategory(Category category) throws Exception {
         String CATEGORY_IMAGE_FOLDER = CATEGORY_IMAGE_LOCATION_BEFORE_STATIC;
-        String categoryImage = category.getImage();
+        AnimalOrCategoryImage categoryImage = category.getImage();
         if (categoryImage == null) {
             throw new Exception(CategoryConstants.ExceptionMessageCase.NO_IMAGE_PRESENT_FOR_CATEGORY);
         }
-        Path path = Paths.get(
-                CATEGORY_IMAGE_FOLDER + SpecialCharacter.SLASH + categoryImage);
-        deleteImageFromServer(path);
+        if (categoryImage.getImageType().equals("file")) {
+            Path path = Paths.get(
+                    CATEGORY_IMAGE_FOLDER + SpecialCharacter.SLASH + categoryImage);
+            deleteImageFromServer(path);
+        }
         category.setImage(null);
         categoryRepository.save(category);
     }

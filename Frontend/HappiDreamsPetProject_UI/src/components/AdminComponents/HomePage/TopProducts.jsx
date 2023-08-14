@@ -187,7 +187,7 @@ function TopProducts() {
         {isProductLoading ? <Loading /> : <>
         <div className="flex items-center justify-center mb-2 mt-5">Products</div>
       <div className={`overflow-y-auto max-h-[600px] ${products.length >= maximumProductsAdded ? "pointer-events-none" : ""}`}>
-      <Products checkedBoxIds={checkBoxIdsArray} handleCheckBox={(product, checkboxToggle) => {handleCheckBox(checkboxToggle, product)}} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_name_from_components={selectedCategory.label} animal_type_from_components={selectedAnimalType.label} />
+      <Products checkedBoxIds={checkBoxIdsArray} handleCheckBox={(product, checkboxToggle) => {handleCheckBox(checkboxToggle, product)}} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_info_from_components={{"name" : selectedCategory.label, "id" : selectedCategory.id}} animal_info_from_components={{"name" : selectedAnimalType.label, "id" : selectedAnimalType.id}} />
       </div>
         </>}
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-function TabBar({tabs, onTabClick, removePadding}) {
+function TabBar({tabs, onTabClick, removePadding, manualSelectTabIndex}) {
   const [activeTab, setActiveTab] = useState(0);
 
   const handleTabClick = (tabData, tabIndex) => {
@@ -10,13 +10,26 @@ function TabBar({tabs, onTabClick, removePadding}) {
     }
   };
 
-  useEffect(() => {
-    if(tabs.length > 0){  
-        if(tabs[0].hasOwnProperty("handleOnClick")){
-            onTabClick(tabs[0]["handleOnClick"](), tabs[0], 0);
-        }
+  const manualSelectTab = (tabIndex) => {
+    setActiveTab(tabIndex);
+    const selectedTab = tabs[tabIndex];
+    if(selectedTab.hasOwnProperty("handleOnClick")){
+      onTabClick(selectedTab["handleOnClick"](), selectedTab, tabIndex);
     }
-  }, [])
+  };
+
+  useEffect(() => {
+    if(manualSelectTabIndex && manualSelectTabIndex >= 0 && manualSelectTabIndex < tabs.length){
+        manualSelectTab(manualSelectTabIndex);
+    }else{
+        if(tabs.length > 0){  
+            if(tabs[0].hasOwnProperty("handleOnClick")){
+                onTabClick(tabs[0]["handleOnClick"](), tabs[0], 0);
+            }
+        }
+    }   
+  }, [manualSelectTabIndex])
+
 
   return (
    <>
@@ -33,18 +46,6 @@ function TabBar({tabs, onTabClick, removePadding}) {
         </li>
         )
     })}
-    {/* <li className="w-full">
-        <span href="#" className="inline-block cursor-pointer w-full p-4 text-gray-900 bg-gray-100 rounded-l-lg" aria-current="page">Profile</span>
-    </li>
-    <li className="w-full">
-        <span href="#" className="inline-block cursor-pointer w-full p-4 bg-white hover:text-gray-700 hover:bg-gray-50">Dashboard</span>
-    </li>
-    <li className="w-full">
-        <span href="#" className="inline-block cursor-pointer w-full p-4 bg-white hover:text-gray-700 hover:bg-gray-50">Settings</span>
-    </li>
-    <li className="w-full">
-        <span href="#" className="inline-block cursor-pointer w-full p-4 bg-white rounded-r-lg hover:text-gray-700 hover:bg-gray-50">Invoice</span>
-    </li> */}
 </ul>
 </>
   );

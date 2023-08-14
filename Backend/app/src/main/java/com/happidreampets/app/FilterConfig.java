@@ -17,6 +17,7 @@ import com.happidreampets.app.controller.OtherDataControllerInterceptor;
 import com.happidreampets.app.controller.ProductControllerInterceptor;
 import com.happidreampets.app.controller.UserControllerInterceptor;
 import com.happidreampets.app.pre_filters.LoggingFilter;
+import com.happidreampets.app.utils.URLData;
 
 @Configuration
 @ComponentScan("com.happidreampets.app.pre_filters")
@@ -59,30 +60,23 @@ public class FilterConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         addProductInterceptors(registry);
         addOtherDataInterceptors(registry);
+        addUserInterceptors(registry);
     }
 
     public void addProductInterceptors(InterceptorRegistry registry) {
+        List<String> pathPatterns = URLData.getAllProductControllerURL();
         registry.addInterceptor(productControllerInterceptor())
-                .addPathPatterns("/animal/{animalId}/category/{categoryId}/**");
+                .addPathPatterns(pathPatterns);
     }
 
     public void addOtherDataInterceptors(InterceptorRegistry registry) {
-        List<String> pathPatterns = new ArrayList<>();
-        pathPatterns.add("/top-category/{categoryId}");
-        pathPatterns.add("/top-category/{categoryId}/product/{productId}");
-        pathPatterns.add("/animal/{animalId}");
-        pathPatterns.add("/animal/{animalId}/image");
-        pathPatterns.add("/animal/{animalId}/categories");
-        pathPatterns.add("/animal/{animalId}/category/{categoryId}");
-        pathPatterns.add("/animal/{animalId}/category");
-        pathPatterns.add("/animal/{animalId}/category/{categoryId}/image");
+        List<String> pathPatterns = URLData.getAllOtherDataControllerURL();
         registry.addInterceptor(otherDataControllerInterceptor())
                 .addPathPatterns(pathPatterns);
     }
 
     public void addUserInterceptors(InterceptorRegistry registry) {
-        List<String> pathPatterns = new ArrayList<>();
-        pathPatterns.add("/user/**");
+        List<String> pathPatterns = URLData.getAllUserControllerURL();
         registry.addInterceptor(userControllerInterceptor())
                 .addPathPatterns(pathPatterns);
     }

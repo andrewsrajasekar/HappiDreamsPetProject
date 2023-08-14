@@ -8,9 +8,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +20,8 @@ import com.happidreampets.app.controller.APIController.ERROR_CODES;
 import com.happidreampets.app.constants.UserAddressConstants.ExceptionMessageCase;
 import com.happidreampets.app.database.model.User;
 import com.happidreampets.app.database.model.UserAddress;
-import com.happidreampets.app.database.model.UserAddress.USERADDRESS;
+import com.happidreampets.app.database.model.UserAddressNonDBModel;
+import com.happidreampets.app.database.model.UserAddress.USERADDRESSCOLUMN;
 import com.happidreampets.app.database.repository.UserAddressRepository;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
@@ -33,9 +31,6 @@ import com.happidreampets.app.utils.Utils;
 public class UserAddressCRUD {
     @Autowired
     private UserAddressRepository userAddressRepository;
-
-    @Autowired
-    private UserCRUD userCRUD;
 
     private DbFilter dbFilter;
 
@@ -60,20 +55,21 @@ public class UserAddressCRUD {
         this.dbFilter = dbFilter;
     }
 
-    private USERADDRESS checkAndGetColumnName() {
+    private USERADDRESSCOLUMN checkAndGetColumnName() {
         if (dbFilter != null) {
-            if (EnumUtils.isValidEnum(USERADDRESS.class, dbFilter.getSortColumn().toString())) {
-                USERADDRESS enumValue = USERADDRESS.valueOf(dbFilter.getSortColumn().toString());
+            if (EnumUtils.isValidEnum(USERADDRESSCOLUMN.class, dbFilter.getSortColumn().toString())) {
+                USERADDRESSCOLUMN enumValue = USERADDRESSCOLUMN.valueOf(dbFilter.getSortColumn().toString());
                 return enumValue;
             }
         }
         return null;
     }
 
-    private JSONObject getDataInRequiredFormat(Iterable<UserAddress> data) {
+    // TO DO Remove USER KEY
+    private JSONObject getDataInRequiredFormat(List<UserAddressNonDBModel> data) {
         JSONObject responseData = new JSONObject();
         responseData.put(ProductConstants.LowerCase.DATA, JSONObject.NULL);
-        if (getDbFilter() != null) {
+        if (getDbFilter() != null && getDbFilter().getFormat() != null) {
             if (getDbFilter().getFormat().equals(DATAFORMAT.JSON)) {
                 JSONArray responseArray = new JSONArray();
                 data.forEach(row -> {
@@ -81,26 +77,17 @@ public class UserAddressCRUD {
                 });
                 responseData.put(ProductConstants.LowerCase.DATA, responseArray);
             } else if (getDbFilter().getFormat().equals(DATAFORMAT.POJO)) {
-                List<UserAddress> responseList = new ArrayList<>();
+                List<UserAddressNonDBModel> responseList = new ArrayList<>();
                 data.forEach(responseList::add);
                 responseData.put(ProductConstants.LowerCase.DATA, responseList);
             }
         } else {
-            List<UserAddress> responseList = new ArrayList<>();
+            List<UserAddressNonDBModel> responseList = new ArrayList<>();
             data.forEach(responseList::add);
             responseData.put(ProductConstants.LowerCase.DATA, responseList);
         }
 
         return responseData;
-    }
-
-    private JSONObject getPageData(Page<UserAddress> userPage) {
-        JSONObject pageData = new JSONObject();
-        pageData.put(ProductConstants.LowerCase.PAGE, userPage.getNumber() + 1);
-        pageData.put(ProductConstants.SnakeCase.PER_PAGE, userPage.getSize());
-        pageData.put(ProductConstants.LowerCase.COUNT, userPage.getContent().size());
-        pageData.put(ProductConstants.SnakeCase.MORE_RECORDS, userPage.hasNext());
-        return pageData;
     }
 
     public JSONObject getUserAddressesForUI(User user) {
@@ -109,15 +96,12 @@ public class UserAddressCRUD {
         if (getDbFilter() != null && checkAndGetColumnName() != null) {
             sort = Sort.by(getDbFilter().getSortDirection(), checkAndGetColumnName().getColumnName());
         }
-        Integer startIndex = getDbFilter() != null ? getDbFilter().getStartIndex() : 0;
-        Integer limit = getDbFilter() != null ? getDbFilter().getLimitIndex() : 0;
-        Pageable pageable = sort != null ? PageRequest.of(startIndex, limit, sort) : PageRequest.of(startIndex, limit);
-        Page<UserAddress> userAddressPage = userAddressRepository.findByUserIdAndToBeDeletedIsFalse(user.getId(),
-                pageable);
-        Iterable<UserAddress> userIterable = userAddressPage.getContent();
+        List<UserAddressNonDBModel> userAddressPage = sort != null
+                ? userAddressRepository.findByUserIdAndToBeDeletedIsFalseInNonDBModel(user.getId(),
+                        sort)
+                : userAddressRepository.findByUserIdAndToBeDeletedIsFalseInNonDBModel(user.getId());
         userAddressData.put(ProductConstants.LowerCase.DATA,
-                getDataInRequiredFormat(userIterable).get(ProductConstants.LowerCase.DATA));
-        userAddressData.put(ProductConstants.LowerCase.INFO, getPageData(userAddressPage));
+                getDataInRequiredFormat(userAddressPage).get(ProductConstants.LowerCase.DATA));
         return userAddressData;
     }
 
@@ -125,24 +109,56 @@ public class UserAddressCRUD {
         return userAddressRepository.findByUserIdAndToBeDeletedIsFalse(user.getId());
     }
 
+    public List<UserAddressNonDBModel> getUserAddressesInNonDBModel(User user) {
+        return userAddressRepository.findByUserIdAndToBeDeletedIsFalseInNonDBModel(user.getId());
+    }
+
+    public UserAddressNonDBModel getUserAddressInNonDBModel(User user, Long addressId) {
+        return userAddressRepository.findByIdAndUserIdAndToBeDeletedIsFalseInNonDBModel(addressId, user.getId());
+    }
+
     public UserAddress getUserAddress(User user, Long addressId) {
         return userAddressRepository.findByIdAndUserIdAndToBeDeletedIsFalse(addressId, user.getId());
     }
 
     public Boolean isValidAddressId(User user, Long addressId) {
-        UserAddress userAddress = userAddressRepository.findByIdAndUserIdAndToBeDeletedIsFalse(addressId, user.getId());
+        UserAddress userAddress = userAddressRepository.findByIdAndUserIdAndToBeDeletedIsFalse(addressId,
+                user.getId());
         return userAddress != null;
     }
 
-    public UserAddress checkAddressIdAndThrowException(User user, Long addressId) throws Exception {
-        UserAddress userAddress = userAddressRepository.findByIdAndUserIdAndToBeDeletedIsFalse(addressId, user.getId());
+    public JSONObject checkAddressIdAndThrowExceptionInNonDBModelJSON(User user, Long addressId)
+            throws Exception {
+        UserAddressNonDBModel userAddress = userAddressRepository.findByIdAndUserIdAndToBeDeletedIsFalseInNonDBModel(
+                addressId,
+                user.getId());
+        if (userAddress == null) {
+            throw new Exception(ExceptionMessageCase.INVALID_USER_ADDRESS_ID);
+        }
+        return userAddress.toJSON();
+    }
+
+    public UserAddressNonDBModel checkAddressIdAndThrowExceptionInNonDBModel(User user, Long addressId)
+            throws Exception {
+        UserAddressNonDBModel userAddress = userAddressRepository.findByIdAndUserIdAndToBeDeletedIsFalseInNonDBModel(
+                addressId,
+                user.getId());
         if (userAddress == null) {
             throw new Exception(ExceptionMessageCase.INVALID_USER_ADDRESS_ID);
         }
         return userAddress;
     }
 
-    public UserAddress createUserAddress(User user, String address, String city, String state, String country,
+    public UserAddress checkAddressIdAndThrowException(User user, Long addressId) throws Exception {
+        UserAddress userAddress = userAddressRepository.findByIdAndUserIdAndToBeDeletedIsFalse(addressId,
+                user.getId());
+        if (userAddress == null) {
+            throw new Exception(ExceptionMessageCase.INVALID_USER_ADDRESS_ID);
+        }
+        return userAddress;
+    }
+
+    public UserAddressNonDBModel createUserAddress(User user, String address, String city, String state, String country,
             String pincode) throws Exception {
         List<UserAddress> existingUserAddresses = getUserAddresses(user);
         if (existingUserAddresses.size() >= userAddressSize) {
@@ -175,13 +191,17 @@ public class UserAddressCRUD {
         userAddress.setPincode(pincode);
         userAddress.setState(state);
         userAddress.setUser(user);
+        userAddress.setIsDefaultAddress(Boolean.FALSE);
+        userAddress.setAddedTime(System.currentTimeMillis());
 
-        return userAddressRepository.save(userAddress);
+        userAddress = userAddressRepository.save(userAddress);
+
+        return new UserAddressNonDBModel(userAddress);
     }
 
-    public UserAddress updateUserAddress(User user, Long addressId, String address, String city, String state,
+    public UserAddressNonDBModel updateUserAddress(User user, Long addressId, String address, String city, String state,
             String country,
-            String pincode) throws Exception {
+            String pincode, Boolean isDefault) throws Exception {
         UserAddress userAddress = getUserAddress(user, addressId);
         if (null == userAddress) {
             throw new Exception(ExceptionMessageCase.INVALID_USER_ADDRESS_ID);
@@ -201,8 +221,21 @@ public class UserAddressCRUD {
         if (pincode != null) {
             userAddress.setPincode(pincode);
         }
+        if (isDefault != null) {
+            if (isDefault) {
+                makeAllUserAddressAsNotDefault(user);
+                userAddress.setIsDefaultAddress(Boolean.TRUE);
+            }
+            userAddress.setIsDefaultAddress(isDefault);
+        }
 
-        return userAddressRepository.save(userAddress);
+        userAddress = userAddressRepository.save(userAddress);
+
+        return new UserAddressNonDBModel(userAddress);
+    }
+
+    private void makeAllUserAddressAsNotDefault(User user) {
+        userAddressRepository.updateIsDefaultAddressAsFalseColumnForUser(user);
     }
 
     public Boolean deleteUserAddress(User user, Long addressId) throws Exception {
@@ -210,13 +243,9 @@ public class UserAddressCRUD {
         if (null == userAddress) {
             throw new Exception(ExceptionMessageCase.INVALID_USER_ADDRESS_ID);
         }
-        UserAddress defaultAddress = user.getDefaultAddress();
         userAddress.setToBeDeleted(Boolean.TRUE);
         userAddress.setToBeDeletedStatusChangeTime(System.currentTimeMillis());
         userAddressRepository.save(userAddress);
-        if (defaultAddress.getId() == userAddress.getId()) {
-            userCRUD.updateDefaultAddressToNull(user.getId());
-        }
 
         return true;
     }
@@ -236,10 +265,13 @@ public class UserAddressCRUD {
         } else if (!body.has(LowerCase.STATE)) {
             missingField = LowerCase.STATE;
             message = message.replace(ProductConstants.LoggerCase.ARG0, LowerCase.STATE);
-        } else if (!body.has(LowerCase.COUNTRY)) {
-            missingField = LowerCase.COUNTRY;
-            message = message.replace(ProductConstants.LoggerCase.ARG0, LowerCase.COUNTRY);
-        } else if (!body.has(LowerCase.PINCODE)) {
+        }
+        // else if (!body.has(LowerCase.COUNTRY)) {
+        // missingField = LowerCase.COUNTRY;
+        // message = message.replace(ProductConstants.LoggerCase.ARG0,
+        // LowerCase.COUNTRY);
+        // }
+        else if (!body.has(LowerCase.PINCODE)) {
             missingField = LowerCase.PINCODE;
             message = message.replace(ProductConstants.LoggerCase.ARG0, LowerCase.PINCODE);
         } else {

@@ -29,14 +29,14 @@ import io.jsonwebtoken.security.Keys;
 public class JwtUtils {
     private static final Logger LOG = Logger.getLogger(JwtUtils.class.getName());
 
-    @Value("${happidreampets.app.jwtSecret}")
+    @Value("${happidreampets.app.internal.jwtSecret}")
     private String jwtSecret;
 
     @Autowired
     private UserCRUD userCRUD;
 
-    @Value("${happidreampets.app.jwtExpirationMs}")
-    private int jwtExpirationMs;
+    @Value("${happidreampets.app.internal.jwtExpirationMs}")
+    private Integer jwtExpirationMs;
 
     @Autowired
     private InternalAuthenticationTokenCRUD internalAuthenticationTokenCRUD;
@@ -99,6 +99,10 @@ public class JwtUtils {
         return data;
     }
 
+    public void removeToken(User user) throws Exception {
+        internalAuthenticationTokenCRUD.deleteInternalAuthenticationToken(user);
+    }
+
     private Key key() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
@@ -128,35 +132,31 @@ public class JwtUtils {
         }
     }
 
-    public Boolean isTokenExpired(String token) {
-        Claims claims = Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(token).getBody();
+    public Boolean isTokenExpired(InternalAuthenticationToken internalAuthenticationToken) {
         Calendar currentCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
-        Date tokenDate = claims.getExpiration();
         Calendar tokenDateCalendar = Calendar.getInstance();
-        tokenDateCalendar.setTime(tokenDate);
+        tokenDateCalendar.setTimeInMillis(internalAuthenticationToken.getExpiringTime());
         if (!tokenDateCalendar.getTimeZone().getID().equals("UTC")) {
             tokenDateCalendar.setTimeZone(TimeZone.getTimeZone("UTC"));
         }
-        if (currentCalendar.equals(tokenDateCalendar) || currentCalendar.before(tokenDateCalendar)) {
+        if (currentCalendar.after(tokenDateCalendar)) {
             return true;
         }
         return false;
     }
 
-    private InternalAuthenticationToken regenerateExpiredAuthenticationTokenForInternalUser(User user) {
-        try {
-            if (getIsInternalCall() && user != null) {
-                internalAuthenticationTokenCRUD
-                        .deleteInternalAuthenticationToken(user);
-                InternalAuthenticationToken newToken = internalAuthenticationTokenCRUD
-                        .insertInternalAuthenticationToken(user, this.generateJwtToken(user));
-                return newToken;
-            }
+    private Boolean isSameDayUpdate(InternalAuthenticationToken authenticationToken) {
+        Calendar lastUpdatedCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+        Long lastUpdatedTime = authenticationToken.getUpdatedTime();
+        lastUpdatedCalendar.setTimeInMillis(lastUpdatedTime);
 
-        } catch (Exception ex) {
-            LOG.log(Level.SEVERE, "Exception in Generating expirationToken: " + ex.getMessage());
-        }
-        return null;
+        Calendar currentCalendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+
+        boolean sameDay = lastUpdatedCalendar.get(Calendar.YEAR) == currentCalendar.get(Calendar.YEAR)
+                && lastUpdatedCalendar.get(Calendar.MONTH) == currentCalendar.get(Calendar.MONTH)
+                && lastUpdatedCalendar.get(Calendar.DAY_OF_MONTH) == currentCalendar.get(Calendar.DAY_OF_MONTH);
+
+        return sameDay;
     }
 
     public JSONObject validateJwtToken(String authToken) {
@@ -170,10 +170,24 @@ public class JwtUtils {
             if (user == null) {
                 return returnData;
             }
-            Boolean isTokenExists = internalAuthenticationTokenCRUD.checkTokenForUser(user, authToken);
-            if (isTokenExists) {
-                Jwts.parserBuilder().setSigningKey(key()).build().parse(authToken);
+            InternalAuthenticationToken authenticationToken = internalAuthenticationTokenCRUD
+                    .getInternalAuthenticationTokenOfUser(user);
+            Boolean isTokenExists = Boolean.FALSE;
+            if (authenticationToken.getToken().equals(authToken)) {
+                if (isTokenExpired(authenticationToken)) {
+                    throw new ExpiredJwtException(null, null, "Given token " + authToken + " is expired.");
+                } else {
+                    if (!isSameDayUpdate(authenticationToken)) {
+                        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                        calendar.add(Calendar.MILLISECOND, jwtExpirationMs);
+                        internalAuthenticationTokenCRUD.updateInternalAuthenticationToken(authenticationToken,
+                                calendar.getTime().getTime());
+                    }
+                }
+                isTokenExists = Boolean.TRUE;
                 returnData.remove(ControllerConstants.LowerCase.REASON);
+            } else {
+                throw new MalformedJwtException("Given token " + authToken + " is invalid.");
             }
             returnData.put(ControllerConstants.LowerCase.STATUS, isTokenExists);
             returnData.put(UserConstants.SnakeCase.USER_INFO, user);
@@ -181,19 +195,10 @@ public class JwtUtils {
             LOG.log(Level.SEVERE, "Invalid JWT token: " + ex.getMessage());
         } catch (ExpiredJwtException ex) {
             LOG.log(Level.SEVERE, "JWT token is expired: " + ex.getMessage());
-            InternalAuthenticationToken newToken = regenerateExpiredAuthenticationTokenForInternalUser(user);
-            if (newToken != null) {
-                returnData.put(ControllerConstants.SnakeCase.NEW_AUTHENTICATION_TOKEN,
-                        newToken);
-            } else {
-                returnData.put(ControllerConstants.LowerCase.REASON,
-                        ControllerConstants.SnakeCase.EXPIRED_AUTHENTICATION_TOKEN);
-            }
-
-        } catch (UnsupportedJwtException ex) {
-            LOG.log(Level.SEVERE, "JWT token is unsupported: " + ex.getMessage());
-        } catch (IllegalArgumentException ex) {
-            LOG.log(Level.SEVERE, "JWT claims string is empty: " + ex.getMessage());
+            returnData.put(ControllerConstants.LowerCase.REASON,
+                    ControllerConstants.SnakeCase.EXPIRED_AUTHENTICATION_TOKEN);
+        } catch (Exception ex) {
+            LOG.log(Level.SEVERE, "Exception in JWT Validation: " + ex.getMessage());
         }
 
         return returnData;

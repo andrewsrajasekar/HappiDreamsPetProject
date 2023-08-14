@@ -1,5 +1,5 @@
 import {MinusIcon, ChevronRightIcon}  from '@heroicons/react/20/solid';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Transition } from 'react-transition-group';
 import InventoryComponent from './InventoryComponent';
 import AnimalCreateForm from './AnimalCreateForm';
@@ -9,6 +9,10 @@ import AnimalList from './AnimalList';
 import CategoryList from './CategoryList';
 import TabBar from '../../TabBar';
 import ProductList from './ProductList';
+import { getAllAnimals, getAllCategories } from '../../../services/ApiClient';
+import UINotification from '../../UINotification';
+
+//Do When on edit and delete of category and animal, right pane data must be updated.
 
 function InventoryMainpage(){
 
@@ -20,6 +24,90 @@ function InventoryMainpage(){
     const [isCategoryTransitionStart, setIsCategoryTransitionStart] = useState(false);
     const [removeFlexClass, setRemoveFlexClass] = useState(false);
     const [renderedTabContent, setRenderedTabContent] = useState();
+    const [allAnimals, setAllAnimals] = useState([]);
+    const [allCategories, setAllCategories] = useState([]);
+    const [animalComponentReiterate, setAnimalComponentReiterate] = useState(1);
+    const [categoryComponentReiterate, setCategoryComponentReiterate] = useState(1);
+    const [allAnimalsGetIter, setAllAnimalsGetIter] = useState(0);
+    const [allAnimalsGetTrigger, setAllAnimalsGetTrigger] = useState(false);
+    const [allCategoriesGetIter, setAllCategoriesGetIter] = useState(0);
+    const [allCategoriesGetTrigger, setAllCategoriesGetTrigger] = useState(false);
+
+    const getAllAnimalsData = async() => {
+      const allAnimalsData = await getAllAnimals();
+      if(allAnimalsData.isSuccess){
+        setAllAnimals(allAnimalsData.successResponse.data.data);
+      }else{
+        setIsAnimalTransitionStart(false);
+        setAllAnimalsGetTrigger(false);
+        UINotification({ message: "Issue Occured, while collecting Animals Data", type: "Error" });
+      }
+    }
+
+    const getAllCategoriesData = async() => {
+      const allCategoriesData = await getAllCategories(selectedAnimalType.id);
+      if(allCategoriesData.isSuccess){
+        setAllCategories(allCategoriesData.successResponse.data.data);
+      }else{
+        setIsCategoryTransitionStart(false);
+        setAllCategoriesGetTrigger(false);
+        UINotification({ message: "Issue Occured, while collecting Categories Data", type: "Error" });
+      }
+    }
+
+    useEffect(() => {
+      if(isAnimalTransitionStart){
+        getAllAnimalsData();
+      }
+    }, [isAnimalTransitionStart]);
+
+    useEffect(() => {
+      if(allAnimalsGetTrigger){
+        getAllAnimalsData();
+      }
+    }, [allAnimalsGetTrigger]);
+
+    useEffect(() => {
+      if(allAnimalsGetIter > 0){
+        setAllAnimalsGetTrigger(true);
+      } 
+    }, [allAnimalsGetIter])
+
+
+    useEffect(() => {
+      if((isCategoryTransitionStart) && selectedAnimalType.id >= 0){
+        getAllCategoriesData();
+      }
+    }, [isCategoryTransitionStart]);
+
+    useEffect(() => {
+      if((allCategoriesGetTrigger) && selectedAnimalType.id >= 0){
+        getAllCategoriesData();
+      }
+    }, [allCategoriesGetTrigger]);
+
+    useEffect(() => {
+      if(allCategoriesGetIter > 0){
+        setAllCategoriesGetTrigger(true);
+      } 
+    }, [allCategoriesGetIter])
+
+    useEffect(() => {
+      if(!allAnimalsGetTrigger){
+        setAnimalComponentReiterate(animalComponentReiterate + 1);
+      }else{
+        setAllAnimalsGetTrigger(false);
+      }
+    }, [allAnimals])
+
+    useEffect(() => {
+      if(!allCategoriesGetTrigger){
+        setCategoryComponentReiterate(categoryComponentReiterate + 1);
+      }else{
+        setAllCategoriesGetTrigger(false);
+      } 
+    }, [allCategories])
+
     const animalTabs = [
       {
       "id": 0,
@@ -27,7 +115,7 @@ function InventoryMainpage(){
       "handleOnClick": () => {
         return(
           <div className='mx-96'>
-          <AnimalCreateForm />
+          <AnimalCreateForm onCreateDone={() => {setAllAnimalsGetIter((prevState) => prevState + 1)}} />
           </div>
         )
       }
@@ -37,7 +125,7 @@ function InventoryMainpage(){
         "label": "Modify a Animal Type",
         "handleOnClick": () => {
           return(
-            <AnimalList />
+            <AnimalList refreshParentComponent={() => {setAllAnimalsGetIter((prevState) => prevState + 1)}} />
           )
         },
         "removeFlex": true
@@ -50,7 +138,7 @@ function InventoryMainpage(){
       "handleOnClick": () => {
         return(
           <div className='mx-96'>
-          <CategoryCreateForm animalName={selectedAnimalType.name} />
+          <CategoryCreateForm animalId={selectedAnimalType.id} animalName={selectedAnimalType.name} onCreateDone={() => {setAllCategoriesGetIter((prevState) => prevState + 1)}} />
           </div>
         )
       }
@@ -60,7 +148,7 @@ function InventoryMainpage(){
         "label": `Modify a Category for ${selectedAnimalType.name}`,
         "handleOnClick": () => {
           return(
-            <CategoryList />
+            <CategoryList animalId={selectedAnimalType.id} refreshParentComponent={() => {setAllCategoriesGetIter((prevState) => prevState + 1)}} />
           )
         },
         "removeFlex": true
@@ -74,7 +162,7 @@ function InventoryMainpage(){
     "handleOnClick": () => {
       return(
         <div className='mx-96'>
-        <ProductCreateForm />
+        <ProductCreateForm selectedAnimal={selectedAnimalType} selectedCategory={selectedCategory} />
         </div>
       )
     }
@@ -84,7 +172,7 @@ function InventoryMainpage(){
       "label": `Modify a Category for ${selectedAnimalType.name} - ${selectedCategory.name}`,
       "handleOnClick": () => {
         return(
-          <ProductList categoryName={"Dummy Category 1"} animalName={"Dog"} />
+          <ProductList selectedCategory={selectedCategory} selectedAnimal={selectedAnimalType} />
         )
       },
       "removeFlex": true
@@ -123,7 +211,7 @@ function InventoryMainpage(){
               state === 'entered' ? 'translate-y-0' : '-translate-y-full'
             }`}
           >
-            <InventoryComponent tabs={animalTabs} selectedOption={selectedAnimalType.id >= 0 ? selectedAnimalType : undefined} inventoryType={"animal"} handleSave={(data) => {setSelectedAnimalType(data); console.log(data); setIsAnimalTransitionStart(false);}} />
+            <InventoryComponent key={animalComponentReiterate} onGoBack={() => {setIsAnimalTransitionStart(false)}} allData={allAnimals} tabs={animalTabs} selectedOption={selectedAnimalType.id >= 0 ? selectedAnimalType : undefined} inventoryType={"animal"} handleSave={(data) => {setSelectedAnimalType(data); console.log(data); setIsAnimalTransitionStart(false);}} />
           </div>
         )}
       </Transition>
@@ -143,7 +231,7 @@ function InventoryMainpage(){
               state === 'entered' ? 'translate-y-0' : '-translate-y-full'
             }`}
           >
-            <InventoryComponent tabs={categoryTabs} selectedOption={selectedCategory.id >= 0 ? selectedCategory : undefined} inventoryType={"category"} handleSave={(data) => {setSelectedCategory(data); console.log(data); setIsCategoryTransitionStart(false);}} />
+            <InventoryComponent key={categoryComponentReiterate} onGoBack={() => {setIsCategoryTransitionStart(false)}} allData={allCategories} tabs={categoryTabs} selectedOption={selectedCategory.id >= 0 ? selectedCategory : undefined} inventoryType={"category"} handleSave={(data) => {setSelectedCategory(data); console.log(data); setIsCategoryTransitionStart(false);}} />
           </div>
         )}
       </Transition>
@@ -164,7 +252,7 @@ function InventoryMainpage(){
                 </span>
             </div>
         }
-        {selectedAnimalType.id >= 0 && selectedCategory.id >= 0 && 
+        {selectedAnimalType.id >= 0 && selectedCategory.id >= 0 && !isAnimalTransitionStart && !isCategoryTransitionStart && 
           <div className="flex flex-col mx-32">
           <TabBar tabs={productTabs} onTabClick={(content, tabData) => {handleTabClick(content, tabData)}} />
           <div className={`mt-10 mb-10 ${removeFlexClass ? "" : "flex items-center justify-center"}`}>

@@ -8,7 +8,7 @@ const OrderSummary = () => {
     const courierWebsiteUrl = 'https://www.examplecourier.com';
     const orderStatus = 'Shipped';
     const orderNumber = useParams()["order_number"];
-    debugger;
+    
 
     const handleTrackOrder = () => {
         window.open(courierWebsiteUrl, '_blank');

@@ -1,43 +1,202 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from_components, animal_type_from_components, hideTitleVisibility, handleCheckBox, checkedBoxIds, preventProductNavigation, isAdminPanelUsage, onEdit}){
-    let { category_name } = useParams();
-    let { animal_type } = useParams();
+import { getAnimal, getCategoryBasedOnId, getProducts } from '../services/ApiClient';
+import UINotification from '../components/UINotification';
+import Pagination from '../components/Pagination';
+import Select from "react-select";
+function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from_components, animal_info_from_components, hideTitleVisibility, handleCheckBox, checkedBoxIds, preventProductNavigation, isAdminPanelUsage, onEdit}){
+    let { category_id } = useParams();
+    let { animal_id } = useParams();
+    const [categoryInfo, setCategoryInfo] = useState(category_info_from_components);
+    const [animalInfo, setAnimalInfo] = useState(animal_info_from_components);
     const isAdminPanel = isAdminPanelUsage !== undefined ? isAdminPanelUsage : false;
-    if(category_name_from_components !== undefined){
-      category_name = category_name_from_components;
-    }
-    if(animal_type_from_components !== undefined){
-      animal_type = animal_type_from_components;
-    }
     const [isAllDataInArrayUndefined, setIsAllDataInArrayUndefined] = useState(true);
     const [renderedElements, setRenderedElements] = useState();
     const [lowestPriceFilter, setLowestPriceFilter] = useState(-1);
     const [highestPriceFilter, setHighestPriceFilter] = useState(-1);
     const [isChecked, setIsChecked] = useState([]);
-    const productsData = [
-      {"id": 1, "name" : "Dummy Product 1", "color": "Red", "size": "XL", "weight": "2", "weight_units": "Kilogram", "description": "Dummy Description 1_1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
-      {"id": 2, "name" : "Dummy Product 1", "description": "Dummy Description 1_2", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92000"},
-      {"id": 3, "name" : "Dummy Product 1", "description": "Dummy Description 1_3", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B92500"},
-      {"id": 4, "name" : "Dummy Product 2", "description": "Dummy Description 2_1", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9900"},
-      {"id": 5, "name" : "Dummy Product 2", "description": "Dummy Description 2_2", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/350x350", "price": "\u20B9875"},
-      {"id": 6, "name" : "Dummy Product 1", "description": "Dummy Description 1_4", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/350x350", "price": "\u20B9300"},
-      {"id": 7, "name" : "Dummy Product 3", "description": "Dummy Description 3_1", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B9200"},
-      {"id": 8, "name" : "Dummy Product 3", "description": "Dummy Description 3_2", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/350x350", "price": "\u20B91000"},
-      {"id":9,"name":"Dummy Product 1", "description": "Dummy Description 1_5","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":10,"name":"Dummy Product 1", "description": "Dummy Description 1_6","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":11,"name":"Dummy Product 1", "description": "Dummy Description 1_7","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":12,"name":"Dummy Product 1", "description": "Dummy Description 1_8","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":13,"name":"Dummy Product 1", "description": "Dummy Description 1_9","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":14,"name":"Dummy Product 1", "description": "Dummy Description 1_10","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":15,"name":"Dummy Product 1", "description": "Dummy Description 1_11","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":16,"name":"Dummy Product 1", "description": "Dummy Description 1_12","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":17,"name":"Dummy Product 1", "description": "Dummy Description 1_13","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":18,"name":"Dummy Product 1", "description": "Dummy Description 1_14","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},
-      {"id":19,"name":"Dummy Product 1", "description": "Dummy Description 1_15","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":20,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":21,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":22,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":23,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":24,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":25,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":26,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":27,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":28,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":29,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":30,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":31,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":32,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":33,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":34,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":35,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":36,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":37,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":38,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":39,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"},{"id":40,"name":"Dummy Product 1","animalType":"Dog","categoryName":"Dummy Category 1","image":"https://dummyimage.com/350x350","price":"\u20B9300"}
-    ];
+    const [products, setProducts] = useState([]);
+    let apiPerPageLimit = isAdminPanel ? 32 : 30;
+    const perPageProducts = isAdminPanel ? 16 : 15;
+    const [apiPage, setApiPage] = useState(-1);
+    const [incrementalApiPage, setIncrementalApiPage] = useState(-1);
+    const [apiOngoing, setApiOngoing] = useState(false);
+    const [totalProducts, setTotalProducts] = useState(products.length);
+    const [totalPages, setTotalPages] = useState(Math.floor(totalProducts / perPageProducts) + (totalProducts % perPageProducts == 0 ? 0 : 1));
+    const [currentProducts, setCurrentProducts] = useState([]);
+    const [hasMoreElements, setHasMoreElements] = useState(false);  
+    const [manualPageNumber, setManualPageNumber] = useState(-1);
+    const [manualRefresh, setManualRefresh] = useState(false);
+    const [currentPageNumber, setCurrentPageNumber] = useState(1);
+    const [paginationIndex, setPaginationIndex] = useState(1);
+    const [selectedSortValue, setSelectedSortValue] = useState({id: -1, value: "default", label: "Select an option"});
+    const [userAction, setUserAction] = useState(true);
+    const [applyPriceAction, setApplyPriceAction] = useState(false);
+    const [applyPriceActionIndex, setApplyPriceActionIndex] = useState(0);
+    const [sortValueOptions, setSortValuesOptions] = useState([
+      {id: -1, value: "default", label: "Select an option"},
+      {id: 1, value: "name_asc", label: "Name, ASC"},
+      {id: 2, value: "name_desc", label: "Name, DESC"},
+      {id: 3, value: "price_asc", label: "Price, ASC"},
+      {id: 4, value: "price_desc", label: "Price, DESC"}
+    ]);
+    const customStyles = {
+      menu: (provided, state) => ({
+        ...provided,
+        marginTop: "4px",
+        borderRadius: "0.25rem",
+        borderColor: "rgb(209, 213, 219)",
+        fontSize: "0.875rem",
+        lineHeight: "1.25rem",
+        maxHeight: "200px",
+        overflow: "hidden",
+      }),
+      control: (provided, state) => ({
+        ...provided,
+        cursor: 'pointer'
+      }),
+      option: (provided, state) => ({
+          ...provided,
+          cursor: 'pointer'
+        })
+    };
 
-    const [products, setProducts] = useState(productsData);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+      const fetchAnimalInfo = async(animalId) => {
+        const animalData = await getAnimal(animalId);
+        if(animalData.isSuccess){
+          setAnimalInfo(animalData.successResponse.data);
+        }else{
+          setAnimalInfo({id: -1, name: ""});
+          UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+          navigate("/home");
+        }
+      }
+      if(animal_info_from_components === undefined && animal_id){
+        fetchAnimalInfo(animal_id);
+      }
+    }, [animal_id, animal_info_from_components]);
+
+    useEffect(() => {
+      const fetchCategoryInfo = async(categoryId) => {
+        const categoryData = await getCategoryBasedOnId(animal_id, categoryId);
+        if(categoryData.isSuccess){
+          setCategoryInfo(categoryData.successResponse.data);
+        }else{
+          setCategoryInfo({id: -1, name: ""});
+          UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+          navigate("/home");
+        }
+      }
+      if(category_info_from_components === undefined && category_id && animal_id){
+        fetchCategoryInfo(category_id);
+      }
+    }, [category_id, category_info_from_components]);
+
+  const onPageNumberChange = (pageNumber, setFromItem, setToItem, setTotalPage, setTotalData) => {
+    setCurrentPageNumber(pageNumber);
+    setFromItem((pageNumber - 1) * perPageProducts + 1);
+    setToItem(perPageProducts * pageNumber < totalProducts ? perPageProducts * pageNumber : totalProducts);
+    setTotalPage(totalPages);
+    setTotalData(totalProducts);
+    return true;
+  }
+
+  const fetchProductsByConditions = async (sortCol, sortBy, priceMin, priceMax, hardRefresh) => {
+    setApiOngoing(true);
+    const productData = await getProducts(animalInfo.id, categoryInfo.id, apiPage, apiPerPageLimit,
+      sortCol, sortBy, priceMin, priceMax);
+    if (productData.isSuccess) {
+      let oldData = products.slice();
+      let newData = [...oldData, ...productData.successResponse.data.data];
+      if(hardRefresh){
+        newData = [...productData.successResponse.data.data];
+      }
+      setProducts(newData);
+      if(hardRefresh){
+        setCurrentPageNumber(1);
+      }
+      let infoData = productData.successResponse.data.info;
+      setHasMoreElements(infoData.more_records);
+      setTotalProducts(infoData.total_records);
+      setApiOngoing(false);
+    } else {
+      setProducts({ id: -1, name: "" });
+      UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+      navigate("/home");
+    }
+  }
+
+  useEffect(() => {
+    if (categoryInfo && animalInfo) {
+      setApiPage(1);
+    }
+  }, [categoryInfo, animalInfo]);
+
+  useEffect(() => {
+    const getProductsBasedOnSort = async() => {
+      if(selectedSortValue.value !== "default"){
+        let colName = selectedSortValue.value.split("_")[0];
+        let sortOrder = selectedSortValue.value.split("_")[1];
+        await fetchProductsByConditions(colName, sortOrder === "asc" ? true : sortOrder === "desc" ? false : undefined, lowestPriceFilter >= 0 ? lowestPriceFilter : undefined, highestPriceFilter >= 0 ? highestPriceFilter : undefined, (!userAction || applyPriceAction));
+      }else{
+        await fetchProductsByConditions(undefined, undefined, lowestPriceFilter >= 0 ? lowestPriceFilter : undefined, highestPriceFilter >= 0 ? highestPriceFilter : undefined, (!userAction || applyPriceAction));
+      }
+      if(!userAction){
+        setUserAction(true);
+      }    
+      if(applyPriceAction){
+        setApplyPriceAction(false);
+      }
+    }
+
+    if (categoryInfo && animalInfo && apiPage > 0) {
+      getProductsBasedOnSort();
+    } 
+  }, [selectedSortValue, apiPage, applyPriceActionIndex]);
+  
+  useEffect(() => {
+    if(incrementalApiPage > 0){
+      if(!(apiPage === incrementalApiPage) || (apiPage < incrementalApiPage)){
+        if(!apiOngoing && hasMoreElements){
+          setApiPage(apiPage + 1);
+        }
+      }else{
+        setIncrementalApiPage(-1);
+      }
+    }
+  },[incrementalApiPage, apiOngoing, hasMoreElements])
+
+  useEffect(() => {
+    let nextPageData = products.slice((currentPageNumber - 1) * perPageProducts, perPageProducts * currentPageNumber);
+    if ((nextPageData.length === 0 || (nextPageData.length % perPageProducts !== 0)) && hasMoreElements) {
+      setIncrementalApiPage(Math.floor(currentPageNumber / 2) + Math.floor(currentPageNumber % 2) );
+    } else {
+      renderElements(products.slice((currentPageNumber - 1) * perPageProducts, perPageProducts * currentPageNumber));
+    }
+  }, [currentPageNumber])
+
+  useEffect(() => {
+    if (manualRefresh && manualPageNumber > 0) {
+      let nextPageData = isAnimalProductTypeCategory ? categories.slice((manualPageNumber - 1) * perPageCategories, perPageCategories * manualPageNumber) : animals.slice((manualPageNumber - 1) * perPageCategories, perPageCategories * manualPageNumber);
+      if ((nextPageData.length === 0 || (nextPageData.length % perPageCategories !== 0)) && hasMoreElements) {
+        setApiPage(apiPage + 1);
+      } else {
+        renderElements(products.slice((currentPageNumber - 1) * perPageProducts, perPageProducts * currentPageNumber));
+      }
+    }
+    setManualRefresh(false);
+  }, [manualRefresh]);
+
+  useEffect(() => {
+    renderElements(products.slice((currentPageNumber - 1) * perPageProducts, perPageProducts * currentPageNumber));
+    setTotalPages(Math.floor(totalProducts / perPageProducts) + (totalProducts % perPageProducts == 0 ? 0 : 1));
+    if (currentPageNumber === 1) {
+      setPaginationIndex(paginationIndex + 1);
+    }
+  }, [products]);
 
     const handleCheckBoxChange = (index, product) => {
       isChecked[index] = isChecked[index] !== undefined ? !isChecked[index] : true;
@@ -45,7 +204,6 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
       setIsChecked(newChecked);
       handleCheckBox(product, isChecked[index]);
     }
-    const navigate = useNavigate();
 
     const handleChange=(event)=> {
         let value = event.target.value;
@@ -70,9 +228,16 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
       }
     };
 
+    const applyPriceFilter = () => {
+      setApplyPriceAction(true);
+      setApplyPriceActionIndex( applyPriceActionIndex + 1 );
+    }
+
     const resetPriceFilter = () => {
       setLowestPriceFilter(-1);
       setHighestPriceFilter(-1);
+      setApplyPriceAction(false);
+      setApplyPriceActionIndex( applyPriceActionIndex + 1 );
     }
 
     const handleInputBlur = (event) => {
@@ -120,7 +285,7 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
     }
       const onProductClick = (product) => {
         console.log(product);
-        navigate("/" + animal_type + "/" + category_name + "/" + product.id)
+        navigate("/" + animalInfo.id + "/" + categoryInfo.id + "/" + product.id)
       }
 
       const handleDelete = (index) => {
@@ -146,84 +311,91 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
         }
       }
 
-      useEffect(() => {
-        setRenderedElements(products.map((element, index) => {
-        if(element["categoryName"] === category_name){
-          if(isAllDataInArrayUndefined){
-            setIsAllDataInArrayUndefined(false);
-          }
-          if(checkedBoxIds !== undefined && Array.isArray(checkedBoxIds) && checkedBoxIds.length > 0 && checkedBoxIds.includes(element.id)){
-            isChecked[index] = true;
-            setIsChecked(isChecked);
-          }
-            return(
-              <li key={element.id}>
-              <span className={`group block overflow-hidden ${preventProductNavigation !== undefined ? preventProductNavigation ? "" : "cursor-pointer" : "cursor-pointer"}`} onClick={preventProductNavigation !== undefined ? preventProductNavigation ? null : () => {onProductClick(element)} : () => {onProductClick(element)}}>
-              
-              <img
-                src={element.image}
-                className="h-[350px] w-full object-cover transition duration-500 group-hover:scale-105 sm:h-[450px]"
-              />
-  
-                <div className="relative bg-white pt-3">
-                  {handleCheckBox !== undefined && typeof handleCheckBox === 'function' &&
-                  <input
-                  type="checkbox"
-                  checked={isChecked[index]}
-                  onChange={() => {handleCheckBoxChange(index, element)}}
-                  className="form-checkbox h-5 w-5 text-indigo-600"
-                  disabled={maxCheckedForCheckBox !== undefined && maxCheckedForCheckBox !== null && ((isChecked[index] !== undefined && !isChecked[index]) || isChecked[index] === undefined)  && isChecked.filter((c) => c).length >= maxCheckedForCheckBox}
-                />
-                  }
-                  <h3
-                    className={`text-xs text-gray-700 ${isAdminPanel ? "" : "group-hover:underline group-hover:underline-offset-4"}`}
-                  >
-                    {element.name}
-                  </h3>
+      const handleSortChange = (value) => {
+        setSelectedSortValue(value);
+        setUserAction(false);
+        setApiPage(1);
+      }
+    
+      const renderElements = (productsData) => {
+        setCurrentProducts(productsData);
+      let isAllDataInArrayUndefinedLocal = isAllDataInArrayUndefined;
+      setRenderedElements(productsData.map((element, index) => {
+        if(isAllDataInArrayUndefined){
+          setIsAllDataInArrayUndefined(false);
+          isAllDataInArrayUndefinedLocal = false;
+        }
+        if(checkedBoxIds !== undefined && Array.isArray(checkedBoxIds) && checkedBoxIds.length > 0 && checkedBoxIds.includes(element.id)){
+          isChecked[index] = true;
+          setIsChecked(isChecked);
+        }
+          return(
+            <li key={element.id}>
+            <span className={`group block overflow-hidden ${preventProductNavigation !== undefined ? preventProductNavigation ? "" : "cursor-pointer" : "cursor-pointer"}`} onClick={preventProductNavigation !== undefined ? preventProductNavigation ? null : () => {onProductClick(element)} : () => {onProductClick(element)}}>
+            
+            <img
+              src={element.thumbnailImageUrl ? element.thumbnailImageUrl : "https://dummyimage.com/350x350"}
+              className="h-[350px] w-full object-cover transition duration-500 group-hover:scale-105 sm:h-[450px]"
+            />
 
-                  {isAdminPanel &&
-                    <span className='flex flex-col text-xs italic font-bold'>
-                      {renderProductColorElement(element)}
-                      {renderProductSizeElement(element)}
-                      {renderProductWeightElement(element)}
-                  
-                </span>
+              <div className="relative bg-white pt-3">
+                {handleCheckBox !== undefined && typeof handleCheckBox === 'function' &&
+                <input
+                type="checkbox"
+                checked={isChecked[index]}
+                onChange={() => {handleCheckBoxChange(index, element)}}
+                className="form-checkbox h-5 w-5 text-indigo-600"
+                disabled={maxCheckedForCheckBox !== undefined && maxCheckedForCheckBox !== null && ((isChecked[index] !== undefined && !isChecked[index]) || isChecked[index] === undefined)  && isChecked.filter((c) => c).length >= maxCheckedForCheckBox}
+              />
+                }
+                <h3
+                  className={`text-xs text-gray-700 ${isAdminPanel ? "" : "group-hover:underline group-hover:underline-offset-4"}`}
+                >
+                  {element.name}
+                </h3>
+
+                {isAdminPanel &&
+                  <span className='flex flex-col text-xs italic font-bold'>
+                    {renderProductColorElement(element)}
+                    {renderProductSizeElement(element)}
+                    {renderProductWeightElement(element)}
+                
+              </span>
+              }
+                
+
+                <p className="mt-2">
+                  <span className="sr-only"> Regular Price </span>
+                  {!isAdminPanel ? 
+                    <span className="tracking-wider text-gray-900">  {element.price} </span>
+                    :
+                  <div className='flex flex-row whitespace-nowrap'>
+                  <span className="tracking-wider text-gray-900">  {element.price} </span>
+                  <span className="ml-2 cursor-pointer mr-2 text-green-400 hover:text-green-500" onClick={() => {handleVariation(element)}}>Add a Variation</span>
+                  <span className="cursor-pointer mr-2 text-indigo-500 hover:text-indigo-900" onClick={() => {handleEdit(element)}}>Edit</span>
+                  <span className="cursor-pointer mr-2 text-red-500 hover:text-red-900" onClick={()=>{handleDelete(index)}}>Delete</span>
+                  </div>
                 }
                   
-  
-                  <p className="mt-2">
-                    <span className="sr-only"> Regular Price </span>
-                    {!isAdminPanel ? 
-                      <span className="tracking-wider text-gray-900">  {element.price} </span>
-                      :
-                    <div className='flex flex-row whitespace-nowrap'>
-                    <span className="tracking-wider text-gray-900">  {element.price} </span>
-                    <span className="ml-2 cursor-pointer mr-2 text-green-400 hover:text-green-500" onClick={() => {handleVariation(element)}}>Add a Variation</span>
-                    <span className="cursor-pointer mr-2 text-indigo-500 hover:text-indigo-900" onClick={() => {handleEdit(element)}}>Edit</span>
-                    <span className="cursor-pointer mr-2 text-red-500 hover:text-red-900" onClick={()=>{handleDelete(index)}}>Delete</span>
-                    </div>
-                  }
-                    
-                  </p>
-                </div>
-              </span>
-            </li>
-                )
-        }
+                </p>
+              </div>
+            </span>
+          </li>
+              )
       }
-      ))
-      
-      if(isAllDataInArrayUndefined){
-        setRenderedElements(<div>No Products Found</div>);
-      }
-      }, [isAllDataInArrayUndefined, category_name_from_components, animal_type_from_components, isChecked, products]);
+    ))
+    
+    if(isAllDataInArrayUndefinedLocal){
+      setRenderedElements(<div>No Products Found</div>);
+    }
+    }
 
   return (
     <section>
     <div className="mx-auto max-w-screen-xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <header className={`${hideTitleVisibility !== undefined ? hideTitleVisibility ? "hidden" : "" : ""}`}>
         <h2 className="text-xl font-bold text-gray-900 sm:text-3xl flex items-center justify-center mb-16">
-          {animal_type} - {category_name} Collections
+          {animalInfo && animalInfo.hasOwnProperty("name") ? animalInfo.name : ""} - {categoryInfo && categoryInfo.hasOwnProperty("name") ? categoryInfo.name : ""} Collections
         </h2>
       </header>
   
@@ -260,14 +432,8 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
             <label className="block text-xs font-medium text-gray-700">
               Sort By
             </label>
-  
-            <select id="SortBy" className="mt-1 rounded border-gray-300 text-sm">
-              <option>Sort By</option>
-              <option value="Title, DESC">Title, DESC</option>
-              <option value="Title, ASC">Title, ASC</option>
-              <option value="Price, DESC">Price, DESC</option>
-              <option value="Price, ASC">Price, ASC</option>
-            </select>
+    
+            <Select options={sortValueOptions} styles={customStyles} onChange={handleSortChange}  getOptionValue={(option) => option.label} value={sortValueOptions.find((c) => c.value === selectedSortValue.value)} />
           </div>
   
           <div>
@@ -308,7 +474,13 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
 
                       {lowestPriceFilter > 0 || highestPriceFilter > 0 ? "" : "No Price Filter Selected"}
                     </span>
-  
+                    <button
+                      type="button"
+                      className="text-sm text-gray-900 underline underline-offset-4 float-right"
+                      onClick={applyPriceFilter}
+                    >
+                      Apply
+                    </button>
                     <button
                       type="button"
                       className="text-sm text-gray-900 underline underline-offset-4 float-right"
@@ -367,6 +539,12 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_name_from
           </ul>
         </div>
       </div>
+      {!isAllDataInArrayUndefined && 
+        <>
+         <div className="mt-10">
+          <Pagination key={paginationIndex} totalPages={totalPages} onClickOfPageNumber={(pageNumber, setFromItem, setToItem, setTotalPage, setTotalData) => onPageNumberChange(pageNumber, setFromItem, setToItem, setTotalPage, setTotalData)} initialPerPageResult={currentProducts.length >= perPageProducts ? perPageProducts : currentProducts.length} totalResult={totalProducts} manualPageNumber={manualPageNumber > 0 ? manualPageNumber : undefined} />
+        </div>
+        </>}
     </div>
   </section>
   );

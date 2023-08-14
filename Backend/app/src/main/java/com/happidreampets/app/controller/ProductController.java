@@ -1,17 +1,21 @@
 package com.happidreampets.app.controller;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,7 +34,8 @@ import com.happidreampets.app.utils.AccessLevel;
 import com.happidreampets.app.utils.JSONUtils;
 
 @RestController
-@RequestMapping("animal/{animalId}/category/{categoryId}")
+@CrossOrigin(origins = "*")
+@RequestMapping("/animal/{animalId}/category/{categoryId}")
 public class ProductController extends APIController {
     private Animal currentAnimal;
     private Category currentCategory;
@@ -79,10 +84,22 @@ public class ProductController extends APIController {
     @AccessLevel({ AccessLevel.AccessEnum.USER, AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/products", method = RequestMethod.GET)
     public ResponseEntity<String> getProducts(
+            @RequestParam(value = ProductConstants.SnakeCase.PRICE_MIN, required = false) Long minPrice,
+            @RequestParam(value = ProductConstants.SnakeCase.PRICE_MAX, required = false) Long maxPrice,
+            @RequestParam(value = ProductConstants.SnakeCase.SORT_ORDER, required = false) String sort_order,
+            @RequestParam(value = ProductConstants.SnakeCase.SORT_BY, required = false) String sort_by,
             @RequestParam(value = ProductConstants.LowerCase.PAGE, defaultValue = "1", required = true) Integer page,
             @RequestParam(value = ProductConstants.SnakeCase.PER_PAGE, defaultValue = "6", required = true) Integer per_page) {
         SuccessResponse successResponse = new SuccessResponse();
         try {
+            ParameterCheck paramCheck = new ParameterCheck();
+            paramCheck.checkSortByAndSortOrderProductParameter(sort_order, sort_by);
+            if (minPrice != null && minPrice <= 0) {
+                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_PRICE_MIN_VALUE);
+            }
+            if (maxPrice != null && maxPrice <= 0) {
+                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_PRICE_MAX_VALUE);
+            }
             if (page <= 0) {
                 throw new Exception(ProductConstants.ExceptionMessageCase.PAGE_GREATER_THAN_ZERO);
             }
@@ -94,9 +111,13 @@ public class ProductController extends APIController {
             dbFilter.setFormat(DATAFORMAT.JSON);
             dbFilter.setStartIndex(page - 1);
             dbFilter.setLimitIndex(per_page);
+            if (sort_order != null && sort_by != null) {
+                dbFilter.setSortColumn(paramCheck.getProductColumnBasedOnSortBy(sort_by));
+                dbFilter.setSortDirection(paramCheck.getSortOrder(sort_order));
+            }
             ProductCRUD productCRUD = getProductCRUD();
             productCRUD.setDbFilter(dbFilter);
-            JSONObject data = productCRUD.getProductDetailsForUI(getCurrentCategory());
+            JSONObject data = productCRUD.getProductDetailsForUI(getCurrentCategory(), minPrice, maxPrice);
             successResponse = new SuccessResponse();
             if (data.has(ProductConstants.LowerCase.DATA)
                     && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
@@ -131,7 +152,7 @@ public class ProductController extends APIController {
             } else {
                 successResponse.setApiResponseStatus(HttpStatus.OK);
             }
-            successResponse.setData(data);
+            successResponse.setResponseData(data);
             return successResponse.getResponse();
         } catch (Exception ex) {
             ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
@@ -157,6 +178,7 @@ public class ProductController extends APIController {
             Product product = productCRUD.createProduct(getCurrentCategory(),
                     body.get(ProductConstants.LowerCase.NAME).toString(),
                     body.get(ProductConstants.LowerCase.DESCRIPTION).toString(),
+                    JSONUtils.optString(body, ProductConstants.SnakeCase.RICH_TEXT_DETAILS, null),
                     body.get(ProductConstants.LowerCase.DETAILS).toString(),
                     JSONUtils.optString(body, ProductConstants.LowerCase.COLOR, null),
                     JSONUtils.optString(body, ProductConstants.LowerCase.SIZE, null),
@@ -196,12 +218,20 @@ public class ProductController extends APIController {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
                 throw new Exception(ProductConstants.ExceptionMessageCase.MISSING_PRODUCT_FIELD_FOR_UPDATE);
             }
+            Boolean isColorUpdated = body.has(ProductConstants.LowerCase.COLOR);
+            Boolean isSizeUpdated = body.has(ProductConstants.LowerCase.SIZE);
+            Boolean isWeightUpdated = body.has(ProductConstants.CamelCase.WEIGHTUNITS)
+                    && body.has(ProductConstants.LowerCase.WEIGHT);
             Product product = productCRUD.updateProduct(currentProduct.getId(),
                     JSONUtils.optString(body, ProductConstants.LowerCase.NAME, null),
                     JSONUtils.optString(body, ProductConstants.LowerCase.DESCRIPTION, null),
+                    JSONUtils.optString(body, ProductConstants.SnakeCase.RICH_TEXT_DETAILS, null),
                     JSONUtils.optString(body, ProductConstants.LowerCase.DETAILS, null),
+                    isColorUpdated,
                     JSONUtils.optString(body, ProductConstants.LowerCase.COLOR, null),
+                    isSizeUpdated,
                     JSONUtils.optString(body, ProductConstants.LowerCase.SIZE, null),
+                    isWeightUpdated,
                     JSONUtils.optEnum(body, ProductConstants.CamelCase.WEIGHTUNITS, WEIGHT_UNITS.class),
                     JSONUtils.optInteger(body, ProductConstants.LowerCase.WEIGHT, null),
                     JSONUtils.optLong(body, ProductConstants.LowerCase.STOCKS, null),
@@ -225,18 +255,27 @@ public class ProductController extends APIController {
     }
 
     @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
-    @RequestMapping(value = "/product/{productId}/image", method = RequestMethod.POST)
+    @RequestMapping(value = "/product/{productId}/image", method = RequestMethod.PUT)
     public ResponseEntity<String> addProductImage(
-            @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile productImage) {
+            @RequestParam(ProductConstants.SnakeCase.IMAGE_TYPE) String imageType,
+            @RequestPart(required = false) MultipartFile productImage,
+            @RequestBody(required = false) List<HashMap<String, String>> requestBody) {
         SuccessResponse successResponse = new SuccessResponse();
         try {
+            ParameterCheck paramCheck = new ParameterCheck();
+            paramCheck.checkParameterForMultipleUrlImage(imageType, productImage, requestBody);
+            Boolean isFile = paramCheck.isFile(imageType);
             ProductCRUD productCRUD = getProductCRUD();
-            String originalFilename = productImage.getOriginalFilename();
-            if (!productCRUD.isValidFileExtension(originalFilename)) {
-                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_IMAGE_FORMAT);
+            if (isFile) {
+                String originalFilename = productImage.getOriginalFilename();
+                if (!productCRUD.isValidFileExtension(originalFilename)) {
+                    throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_IMAGE_FORMAT);
+                }
+                productCRUD.addImageToProduct(currentProduct, productImage.getInputStream(),
+                        productCRUD.getExtension(originalFilename));
+            } else {
+                productCRUD.addImageUrlToProduct(currentProduct, paramCheck.extractImageUrlFromHashmap(requestBody));
             }
-            productCRUD.addImageToProduct(currentProduct, productImage.getInputStream(),
-                    productCRUD.getExtension(originalFilename));
 
             successResponse = new SuccessResponse();
             successResponse.setApiResponseStatus(HttpStatus.CREATED);

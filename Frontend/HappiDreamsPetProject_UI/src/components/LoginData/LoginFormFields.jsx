@@ -34,7 +34,20 @@ const forgotPasswordEmailField=[
     }
 ]
 
-const forgotPasswordOTPField=[
+// const forgotPasswordOTPField=[
+//     {
+//         labelText:"OTP Password",
+//         labelFor:"otp-password",
+//         id:"otp-password",
+//         name:"otppassword",
+//         type:"text",
+//         autoComplete:"otppassword",
+//         isRequired:true,
+//         placeholder:"OTP Password"   
+//     }
+// ]
+
+const forgotPasswordPasswordFields=[
     {
         labelText:"OTP Password",
         labelFor:"otp-password",
@@ -44,10 +57,7 @@ const forgotPasswordOTPField=[
         autoComplete:"otppassword",
         isRequired:true,
         placeholder:"OTP Password"   
-    }
-]
-
-const forgotPasswordPasswordFields=[
+    },
     {
         labelText:"Password",
         labelFor:"password",
@@ -103,6 +113,19 @@ const changePasswordFields=[
     }
 ]
 
+const confirmUserFields=[
+    {
+        labelText:"OTP",
+        labelFor:"OTP",
+        id:"confirmUserOTP",
+        name:"confirmUserOTP",
+        type:"password",
+        autoComplete:"otp-password",
+        isRequired:true,
+        placeholder:"OTP"   
+    }
+]
+
 const signupFields=[
     {
         labelText:"Username",
@@ -117,7 +140,7 @@ const signupFields=[
     {
         labelText:"Email address",
         labelFor:"email-address",
-        id:"email-address",
+        id:"email",
         name:"email",
         type:"email",
         autoComplete:"email",
@@ -158,4 +181,4 @@ const signupFields=[
     }
 ]
 
-export {loginFields, forgotPasswordEmailField, forgotPasswordOTPField, forgotPasswordPasswordFields, changePasswordFields, signupFields}
+export {loginFields, forgotPasswordEmailField, forgotPasswordPasswordFields, changePasswordFields, confirmUserFields, signupFields}

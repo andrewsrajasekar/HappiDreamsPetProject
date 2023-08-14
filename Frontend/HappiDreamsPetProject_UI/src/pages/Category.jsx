@@ -1,169 +1,243 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Pagination from "../components/Pagination";
 import { useNavigate, useParams } from 'react-router-dom';
 import { CATEGORY_TYPE } from "../utils/CategoryTypes";
+import { deleteAnimal, deleteCategory, getAnimals, getCategory } from "../services/ApiClient";
+import UINotification from "../components/UINotification";
 
-function Category({categoryType, isAdminPanelUsage, onDelete, onEdit}){
-    const { animal_type } = useParams();
-    const isAdminPanel = isAdminPanelUsage !== undefined ? isAdminPanelUsage : false;
-    const isAnimalTypeCategory = (categoryType == CATEGORY_TYPE.ANIMAL_CATEGORY);
-    const isAnimalProductTypeCategory = (categoryType == CATEGORY_TYPE.ANIMAL_PRODUCT_CATEGORY);
-    const [manualPageNumber, setManualPageNumber] = useState(-1);
-    const [manualRefresh, setManualRefresh] = useState(false);
-    const [currentPageNumber, setCurrentPageNumber] = useState(1);
-    const [paginationIndex, setPaginationIndex] = useState(1);
-    const navigate = useNavigate();
-    let allAnimals = [
-      {"id": 1, "name" : "Dummy Animal 1", "description": "Dummy Animal 1 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 2, "name" : "Dummy Animal 2", "description": "Dummy Animal 2 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 3, "name" : "Dummy Animal 3", "description": "Dummy Animal 3 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 4, "name" : "Dummy Animal 4", "description": "Dummy Animal 4 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 5, "name" : "Dummy Animal 5", "description": "Dummy Animal 5 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 6, "name" : "Dummy Animal 6", "description": "Dummy Animal 6 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 7, "name" : "Dummy Animal 7", "description": "Dummy Animal 7 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 8, "name" : "Dummy Animal 8", "description": "Dummy Animal 8 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 9, "name" : "Dummy Animal 9", "description": "Dummy Animal 9 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 10, "name" : "Dummy Animal 10", "description": "Dummy Animal 10 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 11, "name" : "Dummy Animal 11", "description": "Dummy Animal 11 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 12, "name" : "Dummy Animal 12", "description": "Dummy Animal 12 it is", "image": "https://dummyimage.com/600x360"},
-      {"id": 13, "name" : "Dummy Animal 13", "description": "Dummy Animal 13 it is", "image": "https://dummyimage.com/600x360"}
-    ];
-    let allCategories = [
-        {"id": 1, "name" : "Dummy Category 1", "description": "Dummy Category 1 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 2, "name" : "Dummy Category 2", "description": "Dummy Category 2 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 3, "name" : "Dummy Category 3", "description": "Dummy Category 3 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 4, "name" : "Dummy Category 4", "description": "Dummy Category 4 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 5, "name" : "Dummy Category 5", "description": "Dummy Category 5 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 6, "name" : "Dummy Category 6", "description": "Dummy Category 6 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 7, "name" : "Dummy Category 7", "description": "Dummy Category 7 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 8, "name" : "Dummy Category 8", "description": "Dummy Category 8 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 9, "name" : "Dummy Category 9", "description": "Dummy Category 9 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 10, "name" : "Dummy Category 10", "description": "Dummy Category 10 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 11, "name" : "Dummy Category 11", "description": "Dummy Category 11 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 12, "name" : "Dummy Category 12", "description": "Dummy Category 12 it is", "image": "https://dummyimage.com/600x360"},
-        {"id": 13, "name" : "Dummy Category 13", "description": "Dummy Category 13 it is", "image": "https://dummyimage.com/600x360"}
-      ];
-      const perPageCategories = 6;
-      const [animals, setAnimals] = useState(allAnimals);
-      const [categories, setCategories] = useState(allCategories);
+function Category({ categoryType, isAdminPanelUsage, onDelete, onEdit, animalId_AdminPanel }) {
+  
+  let { animal_id } = useParams();
+  const isAdminPanel = isAdminPanelUsage !== undefined ? isAdminPanelUsage : false;
+  animal_id = isAdminPanel ? animalId_AdminPanel : animal_id;
+  const isAnimalTypeCategory = (categoryType == CATEGORY_TYPE.ANIMAL_CATEGORY);
+  const isAnimalProductTypeCategory = (categoryType == CATEGORY_TYPE.ANIMAL_PRODUCT_CATEGORY);
+  const [manualPageNumber, setManualPageNumber] = useState(-1);
+  const [manualRefresh, setManualRefresh] = useState(false);
+  const [currentPageNumber, setCurrentPageNumber] = useState(1);
+  const [paginationIndex, setPaginationIndex] = useState(1);
+  const navigate = useNavigate();
+  const perPageCategories = 6;
+  const [animals, setAnimals] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [hasMoreElements, setHasMoreElements] = useState(false);
+  let apiPerPageLimit = 12;
+  const [apiPage, setApiPage] = useState(1);
+  const [incrementalApiPage, setIncrementalApiPage] = useState(-1);
 
-      const [elements, setElements] = useState();
-      const [totalCategories, setTotalCategories] = useState( isAnimalTypeCategory ? animals.length : categories.length);
-      const [totalPages, setTotalPages] = useState( Math.floor(totalCategories / perPageCategories) + (totalCategories % perPageCategories == 0 ? 0 : 1));
+  const [elements, setElements] = useState();
+  const [apiOngoing, setApiOngoing] = useState(false);
+  const [totalCategories, setTotalCategories] = useState(isAnimalTypeCategory ? animals.length : categories.length);
+  const [totalPages, setTotalPages] = useState(Math.floor(totalCategories / perPageCategories) + (totalCategories % perPageCategories == 0 ? 0 : 1));
 
+  const divElement = useRef(null);
 
-
-      useEffect(() => {
-        renderElements(isAnimalProductTypeCategory ? categories.slice(0, perPageCategories) : animals.slice(0, perPageCategories));
-      }, []);
-
-      const onPageNumberChange = (pageNumber, setFromItem, setToItem, setTotalPage, setTotalData) => {
-        setCurrentPageNumber(pageNumber);
-        setFromItem((pageNumber - 1) * perPageCategories + 1);
-        setToItem(perPageCategories * pageNumber < totalCategories ? perPageCategories * pageNumber : totalCategories);
-        setTotalPage(totalPages);
-        setTotalData(totalCategories);
-        return true;
+  const fetchAPIData = async () => {
+    setApiOngoing(true);
+    const response = isAnimalProductTypeCategory ? await getCategory(animal_id, apiPage, apiPerPageLimit) : await getAnimals(apiPage, apiPerPageLimit);
+    if (response.isSuccess) {
+      if (response.successResponse.data.hasOwnProperty("data") && Array.isArray(response.successResponse.data.data) && response.successResponse.data.data.length > 0) {
+        let oldData = isAnimalProductTypeCategory ? categories.slice() : animals.slice();
+        let newData = [...oldData, ...response.successResponse.data.data];
+        isAnimalProductTypeCategory ? setCategories(newData) : setAnimals(newData);
+        let infoData = response.successResponse.data.info;
+        setHasMoreElements(infoData.more_records);
+        setTotalCategories(infoData.total_records);
+      } else {
+        setHasMoreElements(false);
       }
-
-      useEffect(() => {
-        renderElements(isAnimalProductTypeCategory ? categories.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber) : animals.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber));
-      }, [currentPageNumber])
-
-      useEffect(() => {
-        if(manualRefresh && manualPageNumber > 0){
-          renderElements(isAnimalProductTypeCategory ? categories.slice((manualPageNumber - 1) * perPageCategories, perPageCategories * manualPageNumber) : animals.slice((manualPageNumber - 1) * perPageCategories, perPageCategories * manualPageNumber));
-        }   
-        setManualRefresh(false);   
-      }, [manualRefresh])
-
-      useEffect(() => {
-        if(isAnimalTypeCategory){
-          setTotalCategories(animals.length);
-          setTotalPages(Math.floor(animals.length / perPageCategories) + (animals.length % perPageCategories == 0 ? 0 : 1));
-        }else{
-          setTotalCategories(categories.length);
-          setTotalPages(Math.floor(categories.length / perPageCategories) + (categories.length % perPageCategories == 0 ? 0 : 1));
-        }
-        setPaginationIndex(paginationIndex + 1);
-      }, [animals, categories])
-
-      const openProductsForCategories = (category) => {
-        debugger;
-        navigate("/" + animal_type + "/" + category["name"] + "/" + "products");
-      }
-
-      const openAnimalProductsForAnimal = (animal) => {
-        navigate("/" + animal["name"] + "/" + "categories");
-      }
-
-      const handleDelete = (index) => {
-        let data = [];
-        index = ((currentPageNumber - 1) * perPageCategories) + index;
-        if(isAnimalTypeCategory){
-          data = [...animals];
-        }else{
-          data = [...categories];
-        }
-        data.splice(index, 1);
-        if(isAnimalTypeCategory){
-          setAnimals(data);
-        }else{
-          setCategories(data);
-        }
-        setManualPageNumber(currentPageNumber);
-        setManualRefresh(true);
-      }
-
-      const handleEdit = (data) => {
-        data.isExternalUpload = true;
-        data.imageUrl = data.image;
-        onEdit(data);
-      }
-
-      const renderElements = (categoriesData) => {
-        setElements(
-            categoriesData.map((data, index) => {
-            return(
-                <div className={`lg:w-1/3 sm:w-1/2 p-4 ${isAdminPanel ? "" : "cursor-pointer"}`} key={data.id} onClick={isAdminPanel ? null : () => {isAnimalProductTypeCategory ? openProductsForCategories(data) : openAnimalProductsForAnimal(data)}}>
-        <div className="flex relative">
-          <img alt="gallery" className="absolute inset-0 w-full h-full object-cover object-center" src={data.image} />
-          <div className="px-8 py-10 relative z-10 w-full border-4 border-gray-200 bg-white opacity-0 hover:opacity-100">
-            <h2 className="tracking-widest text-sm title-font font-medium text-indigo-500 mb-1">{data.name}</h2>
-            <p className="leading-relaxed">{data.description}</p>
-            {isAdminPanel && 
-            <div className="flex-row items-start justify-center mt-1">
-              <span className="mr-5 cursor-pointer text-indigo-500 hover:text-indigo-900" onClick={() => {handleEdit(data)}}>Edit</span>
-              <span className="cursor-pointer text-red-500 hover:text-red-900" onClick={() => {handleDelete(index, currentPageNumber)}}>Delete</span>
-            </div>
-            }
-          </div>
-        </div>
-      </div>
-            )
-        })
-        );
-      }
-
-
-    return(
-<section className="text-gray-600 body-font">
-  <div className={`container ${isAdminPanel ? "px-5 py-5 mt-5" : "px-5 py-24"} mx-auto`}>
-    {!isAdminPanel && 
-    <div className="flex flex-col text-center w-full mb-12">
-      <h1 className="sm:text-3xl text-2xl font-medium title-font text-gray-900">{isAnimalProductTypeCategory ? "Categories" : "Animal Types"}</h1>
-    </div>
+      setApiOngoing(false);
+    } else {
+      UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
     }
-    <div className="flex flex-wrap -m-4">
-      {elements}
-    </div>
-    <div className="mt-10">
-    <Pagination key={paginationIndex} totalPages={totalPages} onClickOfPageNumber={(pageNumber, setFromItem, setToItem, setTotalPage, setTotalData) => onPageNumberChange(pageNumber, setFromItem, setToItem, setTotalPage, setTotalData)} initialPerPageResult={perPageCategories} totalResult={totalCategories} manualPageNumber={manualPageNumber > 0 ? manualPageNumber : undefined} />
-    </div>
+  };
 
-  </div>
-</section>
+  useEffect(() => {
+    fetchAPIData();
+  }, []);
+
+  const onPageNumberChange = (pageNumber, setFromItem, setToItem, setTotalPage, setTotalData) => {
+    setCurrentPageNumber(pageNumber);
+    setFromItem((pageNumber - 1) * perPageCategories + 1);
+    setToItem(perPageCategories * pageNumber < totalCategories ? perPageCategories * pageNumber : totalCategories);
+    setTotalPage(totalPages);
+    setTotalData(totalCategories);
+    return true;
+  }
+
+  useEffect(() => {
+    fetchAPIData();
+  }, [apiPage]);
+
+  useEffect(() => {
+    if(incrementalApiPage > 0){
+      if(!(apiPage === incrementalApiPage) || (apiPage < incrementalApiPage)){
+        if(!apiOngoing && hasMoreElements){
+          setApiPage(apiPage + 1);
+        }
+      }else{
+        setIncrementalApiPage(-1);
+      }
+    }
+  },[incrementalApiPage, apiOngoing, hasMoreElements])
+
+
+  useEffect(() => {
+    let nextPageData = isAnimalProductTypeCategory ? categories.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber) : animals.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber);
+    if ((nextPageData.length === 0 || (nextPageData.length % perPageCategories !== 0)) && hasMoreElements) {
+      setIncrementalApiPage(Math.floor(currentPageNumber / 2) + Math.floor(currentPageNumber % 2) );
+    } else {
+      if (isAnimalTypeCategory) {
+        renderElements(animals.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber));
+      } else {
+        renderElements(categories.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber));
+      }
+    }
+  }, [currentPageNumber])
+
+  useEffect(() => {
+    if (manualRefresh && manualPageNumber > 0) {
+      let nextPageData = isAnimalProductTypeCategory ? categories.slice((manualPageNumber - 1) * perPageCategories, perPageCategories * manualPageNumber) : animals.slice((manualPageNumber - 1) * perPageCategories, perPageCategories * manualPageNumber);
+      if ((nextPageData.length === 0 || (nextPageData.length % perPageCategories !== 0)) && hasMoreElements) {
+        setApiPage(apiPage + 1);
+      } else {
+        if (isAnimalTypeCategory) {
+          renderElements(animals.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber));
+        } else {
+          renderElements(categories.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber));
+        }
+      }
+    }
+    setManualRefresh(false);
+  }, [manualRefresh])
+
+  useEffect(() => {
+    if (isAnimalTypeCategory) {
+      renderElements(animals.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber));
+    } else {
+      renderElements(categories.slice((currentPageNumber - 1) * perPageCategories, perPageCategories * currentPageNumber));
+    }
+    setTotalPages(Math.floor(totalCategories / perPageCategories) + (totalCategories % perPageCategories == 0 ? 0 : 1));
+    if (currentPageNumber === 1) {
+      setPaginationIndex(paginationIndex + 1);
+    }
+  }, [animals, categories])
+
+  const openProductsForCategories = (category) => {
+    navigate("/" + animal_id + "/" + category["id"] + "/" + "products");
+  }
+
+  const openAnimalProductsForAnimal = (animal) => {
+    navigate("/" + animal["id"] + "/" + "categories");
+  }
+
+  const handleDelete = async (index, currentElement) => {
+    let data = [];
+    index = ((currentPageNumber - 1) * perPageCategories) + index;
+    if (isAnimalTypeCategory) {
+      data = [...animals];
+    } else {
+      data = [...categories];
+    }
+    const deleteResponse = isAnimalTypeCategory ? await deleteAnimal(currentElement.id) : await deleteCategory(animal_id, currentElement.id);
+    if(deleteResponse.isSuccess){
+      data.splice(index, 1);
+      if (isAnimalTypeCategory) {
+        setAnimals(data);
+      } else {
+        setCategories(data);
+      }
+      setManualPageNumber(currentPageNumber);
+      setManualRefresh(true);
+      UINotification({ message: (isAnimalTypeCategory ? "Animal" : "Category") + currentElement.name + " is deleted", type: "Error" });
+      if(onDelete && typeof onDelete === "function"){
+        onDelete();
+      }
+    }else{
+      UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+    }
+
+  }
+
+  const handleEdit = (data) => {
+    data.isExternalUpload = data.image.imageType === "external_url" ? true : false;
+    data.imageUrl = data.image.imageUrl;
+    onEdit(data);
+  }
+
+  const renderElements = (categoriesData) => {
+    let isCategoryPageAndElementsEmpty = isAnimalProductTypeCategory && categoriesData.length == 0;
+    if (isCategoryPageAndElementsEmpty) {
+      if (divElement.current) {
+        divElement.current.classList.remove('flex');
+      }
+    } else {
+      divElement.current.classList.add('flex');
+    }
+    setElements(
+      <>
+        {isCategoryPageAndElementsEmpty &&
+          <>
+            <div className="flex items-center justify-center text-base title-font font-normal mb-1 text-black">
+              No Categories Found
+            </div>
+          </>
+        }
+        {!isCategoryPageAndElementsEmpty &&
+          categoriesData.map((data, index) => {
+            if(!data.hasOwnProperty("image")){
+              data.image = "https://dummyimage.com/600x360";
+            }  
+            return (
+              <div className={`lg:w-1/3 sm:w-1/2 p-4 ${isAdminPanel ? "" : "cursor-pointer"}`} key={data.id} onClick={isAdminPanel ? null : () => { isAnimalProductTypeCategory ? openProductsForCategories(data) : openAnimalProductsForAnimal(data) }}>
+                <div className="flex relative">
+                  <img alt="gallery" className="absolute inset-0 w-full h-full object-contain object-center placeholderColor" src={data.image} />
+                  <div className="px-8 py-10 relative z-10 w-full border-4 border-gray-200 bg-white opacity-0 hover:opacity-100">
+                    <h2 className="tracking-widest text-sm title-font font-medium text-indigo-500 mb-1">{data.name}</h2>
+                    <p className="leading-relaxed">{data.description}</p>
+                    {isAdminPanel &&
+                      <div className="flex-row items-start justify-center mt-1">
+                        <span className="mr-5 cursor-pointer text-indigo-500 hover:text-indigo-900" onClick={() => { handleEdit(data) }}>Edit</span>
+                        <span className="cursor-pointer text-red-500 hover:text-red-900" onClick={() => { handleDelete(index, data) }}>Delete</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        }
+
+      </>
     );
+  }
+
+
+  return (
+    <section className="text-gray-600 body-font">
+      <div className={`container ${isAdminPanel ? "px-5 py-5 mt-5" : "px-5 py-24"} mx-auto`}>
+        {!isAdminPanel &&
+          <div className="flex flex-col text-center w-full mb-12">
+            <h1 className="sm:text-3xl text-2xl font-medium title-font text-gray-900">{isAnimalProductTypeCategory ? "Categories" : "Animal Types"}</h1>
+          </div>
+        }
+        <div className="flex flex-wrap -m-4" ref={divElement}>
+          {!apiOngoing && elements}
+          {apiOngoing && 
+          <>
+             <svg className="bg-indigo-500 animate-spin h-5 w-5 mr-3 ..." viewBox="0 0 24 24">
+              Loading Data
+              </svg>
+          </>
+          }
+        </div>
+        <div className="mt-10">
+          <Pagination key={paginationIndex} totalPages={totalPages} onClickOfPageNumber={(pageNumber, setFromItem, setToItem, setTotalPage, setTotalData) => onPageNumberChange(pageNumber, setFromItem, setToItem, setTotalPage, setTotalData)} initialPerPageResult={perPageCategories} totalResult={totalCategories} manualPageNumber={manualPageNumber > 0 ? manualPageNumber : undefined} />
+        </div>
+
+      </div>
+    </section>
+  );
 }
 
 export default Category;

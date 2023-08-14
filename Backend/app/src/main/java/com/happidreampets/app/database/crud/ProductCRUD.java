@@ -19,6 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.constants.ProductConstants.CamelCase;
 import com.happidreampets.app.constants.ProductConstants.LoggerCase;
 import com.happidreampets.app.constants.ProductConstants.LowerCase;
@@ -54,6 +56,8 @@ public class ProductCRUD {
     @Autowired
     private ProductRepository productRepository;
 
+    private ObjectMapper objectMapper;
+
     private DbFilter dbFilter;
 
     public DbFilter getDbFilter() {
@@ -62,6 +66,10 @@ public class ProductCRUD {
 
     public void setDbFilter(DbFilter dbFilter) {
         this.dbFilter = dbFilter;
+    }
+
+    public ProductCRUD(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
     private PRODUCTCOLUMN checkAndGetColumnName() {
@@ -81,7 +89,7 @@ public class ProductCRUD {
             if (getDbFilter().getFormat().equals(DATAFORMAT.JSON)) {
                 JSONArray responseArray = new JSONArray();
                 data.forEach(row -> {
-                    responseArray.put(row.toJSON());
+                    responseArray.put(row.toJSON(Boolean.TRUE, Boolean.TRUE));
                 });
                 responseData.put(LowerCase.DATA, responseArray);
             } else if (getDbFilter().getFormat().equals(DATAFORMAT.POJO)) {
@@ -104,10 +112,11 @@ public class ProductCRUD {
         pageData.put(SnakeCase.PER_PAGE, productPage.getSize());
         pageData.put(LowerCase.COUNT, productPage.getContent().size());
         pageData.put(SnakeCase.MORE_RECORDS, productPage.hasNext());
+        pageData.put(ProductConstants.SnakeCase.TOTAL_RECORDS, productPage.getTotalElements());
         return pageData;
     }
 
-    public JSONObject getProductDetailsForUI(Category category) {
+    public JSONObject getProductDetailsForUI(Category category, Long minPrice, Long maxPrice) {
         JSONObject productData = new JSONObject();
         Sort sort = null;
         if (getDbFilter() != null && checkAndGetColumnName() != null) {
@@ -116,7 +125,13 @@ public class ProductCRUD {
         Integer startIndex = getDbFilter() != null ? getDbFilter().getStartIndex() : 0;
         Integer limit = getDbFilter() != null ? getDbFilter().getLimitIndex() : 0;
         Pageable pageable = sort != null ? PageRequest.of(startIndex, limit, sort) : PageRequest.of(startIndex, limit);
-        Page<Product> productPage = productRepository.findAllProductsForUIByCategory(pageable, category);
+        Page<Product> productPage = null;
+        if (minPrice != null || maxPrice != null) {
+            productPage = productRepository.findAllProductsForUIByCategoryByMinAndMaxPrice(pageable, category,
+                    minPrice != null ? minPrice : Long.MIN_VALUE, maxPrice != null ? maxPrice : Long.MAX_VALUE);
+        } else {
+            productPage = productRepository.findAllProductsForUIByCategory(pageable, category);
+        }
         Iterable<Product> productIterable = productPage.getContent();
         productData.put(LowerCase.DATA, getDataInRequiredFormat(productIterable).get(LowerCase.DATA));
         productData.put(LowerCase.INFO, getPageData(productPage));
@@ -127,7 +142,7 @@ public class ProductCRUD {
         JSONObject productData = new JSONObject();
         Product product = productRepository.findProductForUIByCategory(id, category);
         if (getDbFilter() != null && getDbFilter().getFormat().equals(DATAFORMAT.JSON)) {
-            productData.put(LowerCase.DATA, product != null ? product.toJSON() : product);
+            productData.put(LowerCase.DATA, product != null ? product.toJSON(Boolean.TRUE, Boolean.TRUE) : product);
         } else {
             productData.put(LowerCase.DATA, product);
         }
@@ -154,20 +169,25 @@ public class ProductCRUD {
         return product;
     }
 
-    public Product createProduct(Category category, String name, String description, String details, String color,
+    public Product createProduct(Category category, String name, String description, String richTextDetails,
+            String details, String color,
             String size, WEIGHT_UNITS weight_units, Integer weight, Long stocks, Long price) throws Exception {
-        return createProduct(category, name, description, details, color, size, weight_units, weight, stocks, price,
+        return createProduct(category, name, description, richTextDetails, details, color, size, weight_units, weight,
+                stocks, price,
                 true, null, null, null);
     }
 
-    public Product createVariantProduct(Category category, String name, String description, String details,
+    public Product createVariantProduct(Category category, String name, String description, String richTextDetails,
+            String details,
             String color, String size, WEIGHT_UNITS weight_units, Integer weight, Long stocks, Long price,
             Boolean isVisible, Long variant_size_id, Long variant_color_id, Long variant_weight_id) throws Exception {
-        return createProduct(category, name, description, details, color, size, weight_units, weight, stocks, price,
+        return createProduct(category, name, description, richTextDetails, details, color, size, weight_units, weight,
+                stocks, price,
                 isVisible, variant_size_id, variant_color_id, variant_weight_id);
     }
 
-    private Product createProduct(Category category, String name, String description, String details, String color,
+    private Product createProduct(Category category, String name, String description, String richTextDetails,
+            String details, String color,
             String size, WEIGHT_UNITS weight_units, Integer weight, Long stocks, Long price, Boolean isVisible,
             Long variant_size_id, Long variant_color_id, Long variant_weight_id) throws Exception {
         if (category == null) {
@@ -186,6 +206,9 @@ public class ProductCRUD {
         product.setCategory(category);
         product.setName(name);
         product.setDescription(description);
+        if (richTextDetails != null) {
+            product.setRichtextDetails(objectMapper.writeValueAsString(richTextDetails));
+        }
         product.setDetails(details);
         if (color != null) {
             product.setColor(color);
@@ -218,8 +241,11 @@ public class ProductCRUD {
         return productRepository.save(product);
     }
 
-    public Product updateProduct(Long id, String name, String description, String details, String color, String size,
-            WEIGHT_UNITS weight_units, Integer weight, Long stocks, Long price, Boolean isVisible, Long variant_size_id,
+    public Product updateProduct(Long id, String name, String description, String richTextDetails, String details,
+            Boolean isColorUpdated,
+            String color, Boolean isSizeUpdated,
+            String size, Boolean isWeightUpdated, WEIGHT_UNITS weight_units, Integer weight, Long stocks, Long price,
+            Boolean isVisible, Long variant_size_id,
             Long variant_color_id, Long variant_weight_id) throws Exception {
         Product product = productRepository.findById(id).orElse(null);
         if (null == product) {
@@ -231,23 +257,31 @@ public class ProductCRUD {
         if (description != null) {
             product.setDescription(description);
         }
+        if (richTextDetails != null) {
+            product.setRichtextDetails(objectMapper.writeValueAsString(richTextDetails));
+        }
         if (details != null) {
             product.setDetails(details);
         }
-        if (color != null) {
+        if (isColorUpdated) {
             product.setColor(color);
         }
-        if (size != null) {
+        if (isSizeUpdated) {
             product.setSize(size);
         }
-        product.setWeightUnits(WEIGHT_UNITS.NONE);
-        product.setWeight(-1);
-        if (!(weight_units != null && weight_units.equals(WEIGHT_UNITS.NONE))) {
-            if (weight != null) {
-                product.setWeightUnits(weight_units);
-                product.setWeight(weight);
+        if (isWeightUpdated) {
+            product.setWeightUnits(null);
+            product.setWeight(null);
+            product.setWeightUnits(null);
+            product.setWeight(null);
+            if (!(weight_units == null || weight == -1)) {
+                if (weight != null) {
+                    product.setWeightUnits(weight_units);
+                    product.setWeight(weight);
+                }
             }
         }
+
         if (stocks != null) {
             product.setStocks(stocks);
         }
@@ -501,7 +535,7 @@ public class ProductCRUD {
 
     public void deleteImageFromProduct(Product product, Long imageId) throws Exception {
         String PRODUCT_IMAGE_FOLDER = PRODUCTS_IMAGE_LOCATION_BEFORE_STATIC;
-        List<ProductImage> existingImages = product.getImageUrls();
+        List<ProductImage> existingImages = product.getImages();
         if (existingImages == null) {
             existingImages = new ArrayList<>();
         }
@@ -515,20 +549,52 @@ public class ProductCRUD {
         if (currentImage == null) {
             throw new Exception(ExceptionMessageCase.IMAGE_ID_NOT_FOUND_FOR_THE_PRODUCT);
         }
-        Path path = Paths.get(
-                PRODUCT_IMAGE_FOLDER + SpecialCharacter.SLASH + currentImage.getImageUrl());
-        deleteImageFromServer(path);
+        if (currentImage.getImageType().equals("file")) {
+            Path path = Paths.get(
+                    PRODUCT_IMAGE_FOLDER + SpecialCharacter.SLASH + currentImage.getImageUrl());
+            deleteImageFromServer(path);
+        }
         existingImages.remove(currentImage);
-        product.setImageUrls(existingImages.isEmpty() ? null : existingImages);
+        product.setImages(existingImages.isEmpty() ? null : existingImages);
         if (currentImage.getId().equals(product.getThumbnailImageUrl().getId())) {
             product.setThumbnailImageUrl(null);
         }
         productRepository.save(product);
     }
 
+    public void addImageUrlToProduct(Product product, List<String> imageUrl) throws Exception {
+        List<ProductImage> existingImages = product.getImages();
+        if (existingImages == null) {
+            existingImages = new ArrayList<>();
+        }
+        if (existingImages.size() >= productImagesSize) {
+            throw new Exception(ExceptionMessageCase.MAXIMUM_IMAGES_FOR_PRODUCT_REACHED);
+        } else {
+            if (imageUrl.size() + existingImages.size() >= productImagesSize) {
+                throw new Exception(ExceptionMessageCase.MAXIMUM_IMAGES_FOR_PRODUCT_WILL_BE_REACHED_FOR_IMAGEURL);
+            }
+        }
+        Long nextImageId = 1l;
+        for (ProductImage data : existingImages) {
+            if (data.getId() >= nextImageId) {
+                nextImageId = data.getId() + 1;
+            }
+        }
+        for (String url : imageUrl) {
+            ProductImage newImage = new ProductImage();
+            newImage.setId(nextImageId);
+            newImage.setImageUrl(url);
+            newImage.setImageType("external_url");
+            existingImages.add(newImage);
+            nextImageId++;
+        }
+        product.setImages(existingImages);
+        productRepository.save(product);
+    }
+
     public void addImageToProduct(Product product, InputStream image, String extension) throws Exception {
         String PRODUCT_IMAGE_FOLDER = PRODUCTS_IMAGE_LOCATION_FULL;
-        List<ProductImage> existingImages = product.getImageUrls();
+        List<ProductImage> existingImages = product.getImages();
         if (existingImages == null) {
             existingImages = new ArrayList<>();
         }
@@ -548,8 +614,9 @@ public class ProductCRUD {
         addImageToServer(image, path);
         newImage.setImageUrl(PRODUCTS_IMAGE_LOCATION_FROM_STATIC + SpecialCharacter.SLASH
                 + getFileName(nextImageId, product.getId(), extension));
+        newImage.setImageType("file");
         existingImages.add(newImage);
-        product.setImageUrls(existingImages);
+        product.setImages(existingImages);
         productRepository.save(product);
     }
 
@@ -566,7 +633,7 @@ public class ProductCRUD {
     }
 
     public void makeImageAsThumbnail(Product product, Long imageId) throws Exception {
-        List<ProductImage> existingImages = product.getImageUrls();
+        List<ProductImage> existingImages = product.getImages();
         if (existingImages == null) {
             throw new Exception(ExceptionMessageCase.NO_IMAGE_ASSOCIATED_WITH_PRODUCT);
         }

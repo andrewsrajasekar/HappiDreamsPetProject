@@ -25,8 +25,6 @@ public class UserControllerInterceptor extends APIController implements HandlerI
     @Autowired
     private UserController userController;
 
-    private Boolean isUserIdPresent = Boolean.FALSE;
-
     @SuppressWarnings("unchecked")
     private Map<String, Object> getPathVariables(HttpServletRequest request) {
         Object attribute = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
@@ -39,6 +37,7 @@ public class UserControllerInterceptor extends APIController implements HandlerI
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
+        Boolean isUserIdPresent = Boolean.FALSE;
         if (handler instanceof HandlerMethod) {
             HandlerMethod handlerMethod = (HandlerMethod) handler;
 
@@ -54,11 +53,12 @@ public class UserControllerInterceptor extends APIController implements HandlerI
             }
         }
 
-        Boolean isPathVariablePassed = checkPathVariables(request, response, handler);
+        Boolean isPathVariablePassed = checkPathVariables(request, response, handler, isUserIdPresent);
         return isPathVariablePassed;
     }
 
-    private Boolean checkPathVariables(HttpServletRequest request, HttpServletResponse response, Object handler)
+    private Boolean checkPathVariables(HttpServletRequest request, HttpServletResponse response, Object handler,
+            Boolean isUserIdPresent)
             throws IOException {
         Map<String, Object> pathVariables = getPathVariables(request);
 

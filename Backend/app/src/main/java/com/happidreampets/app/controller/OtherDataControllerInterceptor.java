@@ -27,10 +27,6 @@ public class OtherDataControllerInterceptor extends APIController implements Han
     @Autowired
     private OtherDataController otherDataController;
 
-    private Boolean isAnimalIdPresent = Boolean.FALSE;
-    private Boolean isCategoryIdPresent = Boolean.FALSE;
-    private Boolean isProductIdPresent = Boolean.FALSE;
-
     @SuppressWarnings("unchecked")
     private Map<String, Object> getPathVariables(HttpServletRequest request) {
         Object attribute = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
@@ -43,6 +39,9 @@ public class OtherDataControllerInterceptor extends APIController implements Han
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
+        Boolean isAnimalIdPresent = Boolean.FALSE;
+        Boolean isCategoryIdPresent = Boolean.FALSE;
+        Boolean isProductIdPresent = Boolean.FALSE;
         if (handler instanceof HandlerMethod) {
             HandlerMethod handlerMethod = (HandlerMethod) handler;
 
@@ -64,11 +63,13 @@ public class OtherDataControllerInterceptor extends APIController implements Han
             }
         }
 
-        Boolean isPathVariablePassed = checkPathVariables(request, response, handler);
+        Boolean isPathVariablePassed = checkPathVariables(request, response, handler, isAnimalIdPresent,
+                isCategoryIdPresent, isProductIdPresent);
         return isPathVariablePassed;
     }
 
-    private Boolean checkPathVariables(HttpServletRequest request, HttpServletResponse response, Object handler)
+    private Boolean checkPathVariables(HttpServletRequest request, HttpServletResponse response, Object handler,
+            Boolean isAnimalIdPresent, Boolean isCategoryIdPresent, Boolean isProductIdPresent)
             throws IOException {
         Map<String, Object> pathVariables = getPathVariables(request);
 
@@ -120,7 +121,7 @@ public class OtherDataControllerInterceptor extends APIController implements Han
             }
             Long categoryId = Long.valueOf(categoryIdObj.toString());
 
-            category = getCategoryCRUD().getCategoryDetail(categoryId);
+            category = getCategoryCRUD().getCategoryDetail(animal, categoryId);
 
             if (isCategoryIdPresent && category == null) {
                 failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);

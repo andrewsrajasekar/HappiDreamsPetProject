@@ -1,46 +1,99 @@
 import LoginInput from "../components/LoginData/LoginInput";
-import { forgotPasswordEmailField, forgotPasswordOTPField, forgotPasswordPasswordFields } from "../components/LoginData/LoginFormFields";
+import { forgotPasswordEmailField, forgotPasswordPasswordFields } from "../components/LoginData/LoginFormFields";
 import LoginFormAction from "../components/LoginData/LoginFormAction";
 import { useEffect, useState } from "react";
 import { toast } from 'react-toastify';
 import { useNavigate } from "react-router-dom";
+import UINotification from "../components/UINotification";
+import { forgotPasswordOTPTrigger, validateAndUpdateForgotPassword } from "../services/ApiClient";
 
 function ForgotPassword(){
     const [fields, setFields] = useState([]);
+    const [isSubmitButtonDisabled, setIsSubmitButtonDisabled] = useState(false);
+    const [isEmailFormValid, setIsEmailFormValid] = useState(false);
+    const [isPasswordFormValid, setIsPasswordFormValid] = useState(false);
     const [forgotPasswordEmailState,setForgotPasswordEmailState]=useState({});
-    const [forgotPasswordOTPState,setForgotPasswordOTPState]=useState({});
     const [forgotPasswordPasswordState,setForgotPasswordPasswordState]=useState({});
     let [isEmailPage, setIsEmailPage] = useState(true);
-    let [isOtpPage, setIsOtpPage] = useState(false);
     let [isPasswordPage, setIsPasswordPage] = useState(false);
     const navigate = useNavigate();
 
     const handleChange=(e)=>{
         if(isEmailPage){
             setForgotPasswordEmailState({...forgotPasswordEmailState,[e.target.id]:e.target.value})
-        }else if(isOtpPage){
-            setForgotPasswordOTPState({...forgotPasswordOTPState,[e.target.id]:e.target.value})
-        }else if(isPasswordPage){
+        } else if(isPasswordPage){
             setForgotPasswordPasswordState({...forgotPasswordPasswordState,[e.target.id]:e.target.value})
         }
 
     }
 
-    const handleSubmit=(e)=>{
-        e.preventDefault();
-        //authenticateUser();
-        if(isEmailPage){
-            setIsOtpPage(true);
-            setIsEmailPage(false);
-        }else if(isOtpPage){
-            setIsPasswordPage(true);
-            setIsOtpPage(false);
+    const validateForm = () => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        const isEmailValid = emailRegex.test(forgotPasswordEmailState["email-address"]);
+
+        setIsEmailFormValid(isEmailValid);
+    };
+
+    const validatePasswords = () => {
+        const isOTPValid = forgotPasswordPasswordState.hasOwnProperty("otp-password") && forgotPasswordPasswordState["otp-password"].trim() !== "";
+        const isPasswordValid = forgotPasswordPasswordState.hasOwnProperty("password") && forgotPasswordPasswordState["password"].trim() !== "";
+        const isReEntryPasswordValid = forgotPasswordPasswordState.hasOwnProperty("confirm-password") && forgotPasswordPasswordState["confirm-password"].trim() !== "";
+
+        setIsPasswordFormValid(isOTPValid && isPasswordValid && isReEntryPasswordValid);
+    };
+
+    useEffect(() => {
+        validateForm();
+    }, [forgotPasswordEmailState]);
+
+    useEffect(() => {
+        validatePasswords();
+    }, [forgotPasswordPasswordState]);
+
+    useEffect(() => {
+        if(isEmailPage && isEmailFormValid){
+            setIsSubmitButtonDisabled(false);
+        }else if(isPasswordPage && isPasswordFormValid){
+            setIsSubmitButtonDisabled(false);
         }else{
-            toast.success('Password Changed Successfully', {
-                position: toast.POSITION.TOP_CENTER
-              });
-              navigate("/login");
+            setIsSubmitButtonDisabled(true);
         }
+        
+    }, [isEmailFormValid, isPasswordFormValid, isEmailPage, isPasswordPage])
+
+    const handleSubmit= async (e) => {
+        e.preventDefault();
+        if(isEmailPage){
+            await triggerOTPEmail();
+            setIsPasswordPage(true);
+            setIsEmailPage(false);
+        } else{
+            await changePassword();
+        }
+    }
+
+    const triggerOTPEmail = async () => {
+        setIsSubmitButtonDisabled(true);
+        const response = await forgotPasswordOTPTrigger(forgotPasswordEmailState["email-address"]);
+        if (response.isSuccess) {
+            UINotification({ message: "Email With OTP Sent", type: "Success" });
+        } else {
+            UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+        }
+        setIsSubmitButtonDisabled(false);
+    }
+
+    const changePassword = async () => {
+        setIsSubmitButtonDisabled(true);
+        const response = await validateAndUpdateForgotPassword(forgotPasswordEmailState["email-address"], forgotPasswordPasswordState["otp-password"], forgotPasswordPasswordState["password"]);
+        if (response.isSuccess) {
+            UINotification({ message: "Password Changed Successfully", type: "Success" });
+            navigate("/login");
+        } else {
+            UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+        }
+        setIsSubmitButtonDisabled(false);
     }
 
     useEffect(() => {
@@ -53,16 +106,6 @@ function ForgotPassword(){
             setFields(dummyfields);   
         }
     }, [isEmailPage]);
-    useEffect(() => {
-        if(isOtpPage){
-            
-            let dummyfields=forgotPasswordOTPField;
-            let fieldsState = {};
-            dummyfields.forEach(field=>fieldsState[field.id]='');
-            setForgotPasswordOTPState(fieldsState);
-            setFields(dummyfields);
-        }
-    }, [isOtpPage]);
     useEffect(() => {
         if(isPasswordPage){
             
@@ -83,7 +126,7 @@ return(
         Forgot Your Password
     </h2>
 
-   <form className={`mt-8 space-y-6 ${isMobileView() ? '' : 'loginMargin' }`} onSubmit={handleSubmit}>
+   <form className={` space-y-6 ${isMobileView() ? '' : 'loginMarginWithoutTopAndBottom' } mt-8`} onSubmit={handleSubmit}>
    {isEmailPage && <div className="-space-y-px">
         {
            
@@ -105,27 +148,7 @@ return(
         }
     </div>}
 
-    {isOtpPage && <div className="-space-y-px">
-        {
-            fields.map(field=>
-                    <LoginInput
-                        key={field.id}
-                        handleChange={handleChange}
-                        value={forgotPasswordOTPState[field.id]}
-                        labelText={field.labelText}
-                        labelFor={field.labelFor}
-                        id={field.id}
-                        name={field.name}
-                        type={field.type}
-                        isRequired={field.isRequired}
-                        placeholder={field.placeholder}
-                />
-            
-            )
-        }
-    </div>}
-
-    {isPasswordPage && <div className="-space-y-px">
+    {isPasswordPage && <div>
         {
             fields.map(field=>
                     <LoginInput
@@ -145,7 +168,7 @@ return(
         }
     </div>}
 
-    <LoginFormAction handleSubmit={handleSubmit} text="Next"/>
+    <LoginFormAction isSubmitButtonDisabled={isSubmitButtonDisabled} handleSubmit={handleSubmit} text={isPasswordPage ? "Save" : "Next"}/>
 
   </form>
 

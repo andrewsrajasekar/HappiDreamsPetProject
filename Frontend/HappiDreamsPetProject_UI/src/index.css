@@ -9,8 +9,13 @@
 .loginMargin{
     margin-top: 0rem;
     margin-bottom: 0rem;
-    margin-left: 40rem;
-    margin-right: 40rem;
+    margin-left: 38rem;
+    margin-right: 38rem;
+}
+
+.loginMarginWithoutTopAndBottom{
+  margin-left: 38rem;
+  margin-right: 38rem;
 }
 
 .changePasswordMargin{
@@ -96,6 +101,11 @@ label#rupee {
   left:+15px;
 }
 
-input#productPrice {
-  text-align:right;
+.placeholderColor{
+  background-color: rgb(202,202,202);
+}
+
+.rdw-editor-main{
+  height: 300px !important;
+  overflow: auto;
 }

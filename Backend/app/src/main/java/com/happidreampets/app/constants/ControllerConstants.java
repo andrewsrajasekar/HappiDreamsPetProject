@@ -51,6 +51,9 @@ public class ControllerConstants {
         public static final String UNAUTHENTICATED_USER = "UnAuthenticated User";
         public static final String EXPIRED_AUTHENTICATION_TOKEN = "Expired Authentication Token";
         public static final String AUTHENTICATION_TOKEN_DOES_NOT_EXIST = "Authentication Token Does not Exist";
+        public static final String INVALID_FILE = "Invalid request format. Please upload a file.";
+        public static final String REQUEST_BODY_IS_MISSING = "Request body is missing.";
+        public static final String INVALID_IMAGE_TYPE = "Invalid Image Type";
     }
 
     public class OtherCase {

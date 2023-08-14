@@ -31,7 +31,7 @@ import { useNavigate } from 'react-router-dom';
 const OrderHistory = () => {
   const navigate = useNavigate();
   const goToOrderSummaryPage = (orderNumber) => {
-    debugger;
+    
     navigate("/orderhistory/" + orderNumber);
   }
 

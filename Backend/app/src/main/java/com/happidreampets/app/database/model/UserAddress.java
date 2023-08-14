@@ -14,27 +14,33 @@ import jakarta.persistence.Table;
 @Entity
 @Table
 public class UserAddress {
-    public enum USERADDRESS {
+    public enum USERADDRESSCOLUMN {
         ID("id"),
-        USER_ID("user_id"),
+        // USER_ID("user_id"),
         ADDRESS("address"),
         CITY("city"),
         STATE("state"),
         COUNTRY("country"),
         PINCODE("pincode"),
+        IS_DEFAULT_ADDRESS("is_default_address"),
         TO_BE_DELETED("to_be_deleted"),
         TO_BE_DELETED_STATUSCHANGETIME("to_be_deleted_statusChangeTime"),
-        ADDED_TIME("added_time");
+        ADDED_TIME("added_time"),
+        ADDEDTIME("addedTime");
 
         private final String columnName;
 
-        USERADDRESS(String columnName) {
+        USERADDRESSCOLUMN(String columnName) {
             this.columnName = columnName;
         }
 
         public String getColumnName() {
             return columnName;
         }
+    }
+
+    public UserAddress(Long id) {
+        this.id = id;
     }
 
     @Id
@@ -61,6 +67,9 @@ public class UserAddress {
     @Column(name = "pincode")
     private String pincode;
 
+    @Column(name = "is_default_address")
+    private Boolean isDefaultAddress;
+
     @Column(name = "to_be_deleted")
     private Boolean toBeDeleted = Boolean.FALSE;
 
@@ -69,6 +78,9 @@ public class UserAddress {
 
     @Column(name = "added_time")
     private Long addedTime;
+
+    public UserAddress() {
+    }
 
     public Long getId() {
         return id;
@@ -120,6 +132,14 @@ public class UserAddress {
 
     public void setPincode(String pincode) {
         this.pincode = pincode;
+    }
+
+    public Boolean getIsDefaultAddress() {
+        return isDefaultAddress;
+    }
+
+    public void setIsDefaultAddress(Boolean isDefaultAddress) {
+        this.isDefaultAddress = isDefaultAddress;
     }
 
     public Boolean getToBeDeleted() {

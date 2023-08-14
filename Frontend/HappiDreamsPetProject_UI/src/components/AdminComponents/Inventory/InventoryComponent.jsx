@@ -1,32 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { Transition } from 'react-transition-group';
 import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/20/solid';
+import { ArrowLeftIcon } from "@heroicons/react/20/solid";
 import Select from "react-select";
 import TabBar from "../../TabBar";
 
-const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) => {
+const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs, allData, onGoBack}) => {
   const [renderedTabContent, setRenderedTabContent] = useState();
   const [isSideBarVisible, setSideBarVisible] = useState(true);
   const [isSideBarInitiated, setIsSideBarInitiated] = useState(true);
   const [isSideBarContentVisible, setIsSideBarContentVisible] = useState(true);
   const [type, setType] = useState("");
   const [removeFlexClass, setRemoveFlexClass] = useState(false);
+  const [animalOptions, setAnimalOptions] = useState(allData);
+  const [categoryOptions, setCategoryOptions] = useState(allData);
 
-  const animalOptions = [
-    { id: 1, name: 'Cat', label: 'Cat' },
-    { id: 2, name: 'Dog', label: 'Dog' },
-    { id: 3, name: 'Fish', label: 'Fish' }];
   const [selectedAnimalType, setSelectedAnimalType] = useState({id: -1, name: "Select a Animal Type", label: 'Select a Animal Type'});
 
-  const categoryOptions = [
-    { id: 1, label: 'Dummy Category 1', name: 'Dummy Category 1' },
-    { id: 2, label: 'Dummy Category 2', name: 'Dummy Category 2' },
-    { id: 3, label: 'Dummy Category 3', name: 'Dummy Category 3' }];
   const [selectedCategory, setSelectedCategoryType] = useState({id: -1, name: "Select a Category", label: 'Select a Category'});
 
   useEffect(() => {
     setType(setTypeFromInventoryType());
-  }, [])
+  }, []);
+  useEffect(() => {
+    setAnimalOptions(allData);
+    setCategoryOptions(allData);
+  }, [allData])
 
   useEffect(() => {
     if(!(selectedOption === undefined || selectedOption === null)){
@@ -38,21 +37,11 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
     }
   }, [type, selectedOption])
 
-
-  const getOptions = () => {
-    if(type === "animal"){
-      return animalOptions;
-    }else if(type === "category"){
-      return categoryOptions;
-    }
-    return null;
-  }
-
   const getPlaceholder = () => {
     if(type === "animal"){
-      return selectedAnimalType.label;
+      return selectedAnimalType.name;
     }else if(type === "category"){
-      return selectedCategory.label;
+      return selectedCategory.name;
     }
     return null;
   }
@@ -71,6 +60,15 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
     }else if(type === "category"){
       return selectedCategory;
     }
+  }
+
+  const getOptionLabel = (option) => {
+    if(option.hasOwnProperty("name")){
+      return option.name;
+    }else if(option.hasOwnProperty("label")){
+      return option.label;
+    }
+    return null;
   }
 
   const customStyles = {
@@ -150,7 +148,10 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
     <div className='flex flex-row h-full'>
     <div className={`flex-grow ${isSideBarVisible ? "pl-5 pt-5 pb-5" : "p-5"}`}>
     <div className="flex flex-col">
-      <TabBar tabs={tabs} onTabClick={(content, tabData) => {handleTabClick(content, tabData)}} />
+      <div className="flex flex-row items-center justify-center">
+    <span className='mr-2'><ArrowLeftIcon className="w-7 h-7 cursor-pointer" onClick={onGoBack ? typeof onGoBack === "function" ? onGoBack : null : null} /></span>
+      <span className='flex-grow'><TabBar tabs={tabs} onTabClick={(content, tabData) => {handleTabClick(content, tabData)}} /></span>
+      </div>
       <div className={`${removeFlexClass ? "" : "flex items-center justify-center"}`}>
         {renderedTabContent}
       </div>
@@ -159,8 +160,6 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
     </div>
     <div className='flex items-center justify-center'>
       <div className='flex items-center justify-center'>
-      {/* <button onClick={handleToggleBottomBar} className={`${isBottomBarVisible ? "hidden" : ""}`}><ChevronLeftIcon className={`w-5 h-5 mt-[4.3px] transition-transform`} /></button> */}
-      
       <Transition
         in={!isSideBarInitiated}
         timeout={300}
@@ -207,8 +206,8 @@ const InventoryComponent = ({inventoryType, handleSave, selectedOption, tabs}) =
               <h3 className="text-lg font-semibold">Select a {fetchTitleFromInventoryType()}</h3>
             </div>
             <div className="mt-1">
-            <Select options={getOptions()}
-      placeholder={getPlaceholder()} onChange={(selectedValue) => {handleChangeInDropDown(selectedValue)}} styles={customStyles}  getOptionValue={(option) => option.id} value={getValueForDropDown()}  />
+            <Select options={type === "animal" ? animalOptions : type === "category" ? categoryOptions : []}
+      placeholder={getPlaceholder()} getOptionLabel={getOptionLabel} onChange={(selectedValue) => {handleChangeInDropDown(selectedValue)}} styles={customStyles}  getOptionValue={(option) => option.id} value={getValueForDropDown()}  />
              <div className='flex items-center justify-center'>
              <button
           className={`bg-green-500 w-36 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4 ${handleSave !== undefined ? "" : "hidden"} disabled:opacity-25 disabled:cursor-not-allowed`} 

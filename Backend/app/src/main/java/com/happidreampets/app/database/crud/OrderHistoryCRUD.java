@@ -145,7 +145,8 @@ public class OrderHistoryCRUD {
         return createOrderHistory(user, products, addedTime, userAddress);
     }
 
-    public OrderHistory createOrderHistory(User user, List<Product> products, Long addedTime, UserAddress userAddress) {
+    public OrderHistory createOrderHistory(User user, List<Product> products, Long addedTime,
+            UserAddress userAddress) {
         if (addedTime == null) {
             addedTime = System.currentTimeMillis();
         }

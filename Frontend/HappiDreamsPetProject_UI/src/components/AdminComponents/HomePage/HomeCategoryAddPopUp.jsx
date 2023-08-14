@@ -61,7 +61,7 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
       } 
   
       const addProduct = (product) => {
-        debugger;
+        
         let isProductExists = selectedProducts.some((productData) => productData.id === product.id);
         if(!isProductExists){
           let newSelectedProducts = [...selectedProducts];
@@ -71,7 +71,7 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
       }
     
       const removeProduct = (productData) => {
-        debugger;
+        
         let modifiedProducts = selectedProducts.filter((product) => {
           return !(product.id === productData.id && product.animalType === selectedAnimalType.label && product.categoryName === selectedCategory.label);
         });
@@ -220,7 +220,7 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
 
                             {/* max-h-[600px] */}
                             <div className={`overflow-y-auto`} style={{ maxHeight: `${maxHeight}px` }} >
-                                <Products checkedBoxIds={checkedIds} handleCheckBox={(product, checkboxToggle) => { handleCheckBox(checkboxToggle, product) }} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_name_from_components={selectedCategory.label} animal_type_from_components={selectedAnimalType.label} maxCheckedForCheckBox={maxCheckedProducts} />
+                                <Products checkedBoxIds={checkedIds} handleCheckBox={(product, checkboxToggle) => { handleCheckBox(checkboxToggle, product) }} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_info_from_components={{"name" : selectedCategory.label, "id" : selectedCategory.id}} animal_info_from_components={{"name" : selectedAnimalType.label, "id" : selectedAnimalType.id}} maxCheckedForCheckBox={maxCheckedProducts} />
                             </div>
                         </>}
                     </div>

@@ -75,7 +75,7 @@ public class ProductControllerInterceptor extends APIController implements Handl
         Long animalId = Long.valueOf(animalIdObj.toString());
         Long categoryId = Long.valueOf(categoryIdObj.toString());
         Animal animal = getAnimalCRUD().getAnimal(animalId);
-        Category category = getCategoryCRUD().getCategoryDetail(categoryId);
+        Category category = getCategoryCRUD().getCategoryDetail(animal, categoryId);
         if (animal == null) {
             failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
             failureResponse

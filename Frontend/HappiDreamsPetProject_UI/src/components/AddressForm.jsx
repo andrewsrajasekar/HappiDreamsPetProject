@@ -1,14 +1,17 @@
 import React, { useEffect, useState } from "react";
 import Select from "react-select";
 
-const AddressForm = ({ onSave }) => {
-  const [address, setAddress] = useState("");
-  const [zipCode, setZipCode] = useState("");
+const AddressForm = ({ onSave, isEdit, editData, addressId }) => {
+  const isEditMode = isEdit !== undefined ? isEdit : false;
 
+  const [address, setAddress] = useState(isEditMode && editData.address ? editData.address : "");
+  const [pinCode, setPinCode] = useState(isEditMode && editData.pinCode ? editData.pinCode : "");
 
-  const [country, setCountry] = useState("");
-  const [state, setState] = useState("");
-  const [city, setCity] = useState("");
+  const [allStateAndCity, setAllStateAndCity] = useState();
+
+  const [country, setCountry] = useState(isEditMode && editData.country ? editData.country : "");
+  const [state, setState] = useState(isEditMode && editData.state ? editData.state  : "");
+  const [city, setCity] = useState(isEditMode && editData.city ? editData.city  : "");
 
   // Fetch list of countries and states from API
   const [countries, setCountries] = useState([]);
@@ -19,21 +22,23 @@ const AddressForm = ({ onSave }) => {
   const[isStateLoading, setIsStateLoading] = useState(false);
   const[isCityLoading, setIsCityLoading] = useState(false);
 
+  const [isSubmitButtonDisabled, setIsSubmitButtonDisabled] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [errors, setErrors] = useState({});
+
   useEffect(() => {
+    const setStateAndCity = async () => {
+      const response = await fetch('../../assets/India.json');
+      const jsonData = await response.json();
+      setAllStateAndCity(jsonData);
+    }
     const fetchCountries = async () => {
       setIsCountryLoading(true);
-      // const response = await fetch("https://www.universal-tutorial.com/api/countries",{
-      //   method: 'GET',
-      //   headers: {
-      //     'Accept': 'application/json',
-      //     'Authorization': 'Bearer ' + import.meta.env.VITE_COUNTRIES_UNIVERSAL_AUTH
-      //   }
-      // });
-      // const data = await response.json();
       const data = [{"country_name" : "India"}];
       setCountries(data.map((country) => ({ label: country.country_name, value: country.country_name })));
       setIsCountryLoading(false);
     };
+    setStateAndCity();
     fetchCountries();
   }, []);
 
@@ -41,64 +46,98 @@ const AddressForm = ({ onSave }) => {
     const fetchStates = async () => {
       if (country) {
         setIsStateLoading(true);
-        // const response = await fetch(`https://www.universal-tutorial.com/api/states/${country}`,{
-        //   method: 'GET',
-        //   headers: {
-        //     'Accept': 'application/json',
-        //     'Authorization': 'Bearer ' + import.meta.env.VITE_COUNTRIES_UNIVERSAL_AUTH
-        //   }
-        // });
-        // const data = await response.json();
-        const data = [{"state_name" : "Tamil Nadu"}];
-        setStates(data.map((state) => ({ label: state.state_name, value: state.state_name })));
+        let allStates = Object.entries(allStateAndCity).map(([key]) => ({
+          "label": key,
+          "value": key
+        }));
+        setStates(allStates);
         setIsStateLoading(false);
       } else {
         setStates([]);
       }
     };
-    fetchStates();
-  }, [country]);
+    if (allStateAndCity) {
+      fetchStates();
+    }
+
+  }, [allStateAndCity, country]);
+
+  const validateForm = () => {
+
+    const isUserNameValid = address.trim() !== "";
+    const isCountryValid = country === "India";
+    const isCityValid = city.trim() !== "";
+    const isStateValid = state.trim() !== "";
+    const isPinCodeValid = pinCode.length === 6;
+
+    setIsFormValid(isUserNameValid && isCountryValid && isCityValid && isStateValid && isPinCodeValid);
+  };
+
+  useEffect(() => {
+    validateForm();
+  }, [address, country, city, state, pinCode]);
 
   useEffect(() => {
     const fetchCities = async () => {
       if (state) {
         setIsCityLoading(true);
-        // const response = await fetch(`https://www.universal-tutorial.com/api/cities/${state}`,{
-        //   method: 'GET',
-        //   headers: {
-        //     'Accept': 'application/json',
-        //     'Authorization': 'Bearer ' + import.meta.env.VITE_COUNTRIES_UNIVERSAL_AUTH
-        //   }
-        // });
-        // const data = await response.json();
-        const data = [{"city_name" : "Chennai"},{"city_name" : "Madurai"}];
-        setCities(data.map((city) => ({ label: city.city_name, value: city.city_name })));
+        let allCities = Object.entries(allStateAndCity[state]).map(([key,value]) => ({
+          "label": value.city_name,
+          "value": value.city_name
+        }));
+        setCities(allCities);
         setIsCityLoading(false);
       } else {
         setCities([]);
       }
     };
-    fetchCities();
-  }, [state]);
+    if (allStateAndCity) {
+      fetchCities();
+    }  
+  }, [allStateAndCity, state]);
 
   const handleCountryChange = (selectedOption) => {
     setCountry(selectedOption.value);
     setState("");
+    if(states){
+      setStates([...states]);
+    } 
+    setCity("");
+    if(cities){
+      setCities([...cities]);
+    }
   };
 
   const handleStateChange = (selectedOption) => {
     setState(selectedOption.value);
+    setCity("");
+    if(cities){
+      setCities([...cities]);
+    }
   };
 
   const handleCityChange = (selectedOption) => {
     setCity(selectedOption.value);
   };
 
-  const validateZipCode = (zip) => {
-
+  const validatePinCode = (event) => {
+    const value = event.target.value;
+    if(value.length !== 6){
+      setErrors({ ...errors, ["zipcode"]: 'Zip Code must be 6 characters' });
+    }else{
+      setErrors({ ...errors, ["zipcode"]: '' });
+    }
   }
 
-  const handleZipCodeKeyPress = (event) => {
+  const validateAddress = (value) => {
+    if(value.trim().length <= 0){
+      setErrors({ ...errors, ["address"]: 'Address must not be empty' });
+    }else{
+      setErrors({ ...errors, ["address"]: '' });
+    }
+  }
+
+  const handlePinCodeKeyPress = (event) => {
     const keyCode = event.keyCode || event.which;
     const keyValue = String.fromCharCode(keyCode);
     if (/[^0-9]/.test(keyValue)) {
@@ -106,10 +145,10 @@ const AddressForm = ({ onSave }) => {
     }
   };
 
-  const handleZipCodeChange = (event) => {
+  const handlePinCodeChange = (event) => {
     const value = event.target.value;
     if (/^[0-9]*$/.test(value)) {
-      setZipCode(value);
+      setPinCode(value);
     }
   };
 
@@ -120,7 +159,9 @@ const AddressForm = ({ onSave }) => {
       city,
       state,
       country,
-      zipCode
+      pinCode,
+      isEditMode,
+      addressId
     });
   };
 
@@ -147,13 +188,15 @@ const AddressForm = ({ onSave }) => {
           Address
         </label>
         <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${errors && errors["address"] ? "border-red-500" : ""}`}
           id="address"
           type="text"
           placeholder="Enter your address"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
+          onBlur={(e) => validateAddress(e.target.value)}
         />
+         {errors && errors["address"] && <div className="error text-red-500 text-xs">{errors["address"]}</div>}
       </div>
       <div className="mb-4">
       <label className="block text-gray-700 font-bold mb-2" htmlFor="country">
@@ -167,34 +210,38 @@ const AddressForm = ({ onSave }) => {
           State
         </label>
         <Select options={states}  isLoading={isStateLoading}
-      placeholder={isStateLoading ? 'Loading States...' : 'Select an option'} onChange={handleStateChange}  getOptionValue={(option) => option.label} styles={customStyles} value={states.find((s) => s.value === state)} />
+      placeholder={isStateLoading ? 'Loading States...' : 'Select an option'} onChange={handleStateChange}  getOptionValue={(option) => option.label} styles={customStyles} value={state ? states.find((s) => s.value === state) : ""} />
       </div>
       <div className="mb-4">
       <label className="block text-gray-700 font-bold mb-2" htmlFor="city">
           City
         </label>
         <Select options={cities}  isLoading={isCityLoading}
-      placeholder={isCityLoading ? 'Loading Cities...' : 'Select an option'} onChange={handleCityChange}  getOptionValue={(option) => option.label} styles={customStyles} value={cities.find((s) => s.value === city)} />
+      placeholder={isCityLoading ? 'Loading Cities...' : 'Select an option'} onChange={handleCityChange}  getOptionValue={(option) => option.label} styles={customStyles} value={city ? cities.find((c) => c.value === city) : ""} />
       </div>
       <div className="mb-4">
-        <label className="block text-gray-700 font-bold mb-2" htmlFor="zipCode">
+        <label className="block text-gray-700 font-bold mb-2" htmlFor="pinCode">
           Zip Code
         </label>
         <input
-          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          id="zipCode"
+          className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline ${errors && errors["pinCode"] ? "border-red-500" : ""}`}
+          id="pinCode"
           type="text"
           placeholder="Enter your zip code"
-          value={zipCode}
-          onChange={(e) => handleZipCodeChange(e)}
-          onKeyPress={(e) => handleZipCodeKeyPress(e)}
+          value={pinCode}
+          maxLength={6}
+          onChange={(e) => handlePinCodeChange(e)}
+          onKeyPress={(e) => handlePinCodeKeyPress(e)}
+          onBlur={(e) => validatePinCode(e)}
         />
+         {errors && errors["zipcode"] && <div className="error text-red-500 text-xs">{errors["zipcode"]}</div>}
       </div>
       <button
-        className="bg-purple-600 hover:bg-purple-900 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+        className="disabled:opacity-25 disabled:cursor-not-allowed bg-purple-600 hover:bg-purple-900 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
         type="submit"
+        disabled={!isFormValid || isSubmitButtonDisabled}
       >
-        Save
+        {isEditMode ? "Update" : "Save"}
       </button>
     </form>
   );

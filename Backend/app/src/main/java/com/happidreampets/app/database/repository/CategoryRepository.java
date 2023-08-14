@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
@@ -16,5 +17,11 @@ public interface CategoryRepository extends CrudRepository<Category, Long> {
 
     Category findByIdAndToBeDeletedIsFalse(long id);
 
+    Category findByAnimalAndIdAndToBeDeletedIsFalse(Animal animal, long id);
+
     Page<Category> findAllByAnimalAndToBeDeletedIsFalse(Pageable pageable, Animal animal);
+
+    List<Category> findAllByAnimalAndToBeDeletedIsFalse(Animal animal, Sort sort);
+
+    List<Category> findAllByAnimalAndToBeDeletedIsFalse(Animal animal);
 }

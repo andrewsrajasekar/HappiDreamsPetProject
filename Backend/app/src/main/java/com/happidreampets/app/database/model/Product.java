@@ -1,9 +1,13 @@
 package com.happidreampets.app.database.model;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
+import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.database.utils.ProductImageConverter;
 import com.happidreampets.app.database.utils.WeightUnitConverter;
 
@@ -14,8 +18,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table
@@ -44,7 +50,7 @@ public class Product {
         ID("id"),
         NAME("name"),
         DESCRIPTION("description"),
-        DETAILS("details"),
+        RICHTEXT_DETAILS("details"),
         COLOR("color"),
         SIZE("size"),
         WEIGHT_UNIT("weight_unit"),
@@ -59,7 +65,7 @@ public class Product {
         TO_BE_DELETED("to_be_deleted"),
         TO_BE_DELETED_STATUSCHANGETIME("to_be_deleted_statusChangeTime"),
         THUMBNAIL_IMAGE_URL("thumbnail_image_url"),
-        IMAGE_URLS("image_urls"),
+        IMAGES("images"),
         ADDED_TIME("added_time");
 
         private final String columnName;
@@ -84,7 +90,12 @@ public class Product {
     @Column(name = "description")
     private String description;
 
-    @Column(name = "details")
+    @Lob
+    @Column(name = "richtext_details", columnDefinition = "LONGTEXT")
+    private String richtextDetails;
+
+    @Lob
+    @Column(name = "details", columnDefinition = "LONGTEXT")
     private String details;
 
     @Column(name = "color")
@@ -132,9 +143,10 @@ public class Product {
     @Convert(converter = ProductImageConverter.class)
     private ProductImage thumbnailImageUrl;
 
-    @Column(name = "image_urls")
+    @Size(max = 2147483647)
+    @Column(name = "images", length = 2147483647)
     @Convert(converter = ProductImageConverter.class)
-    private List<ProductImage> imageUrls;
+    private List<ProductImage> images;
 
     @Column(name = "added_time")
     private Long addedTime;
@@ -156,10 +168,14 @@ public class Product {
         this.thumbnailImageUrl = thumbnailImageUrl;
     }
 
-    public Product(Long id, String name, String color, String size, WEIGHT_UNITS weightUnits, Integer weight,
-            Long stocks, Long price, Category category, ProductImage thumbnailImageUrl, List<ProductImage> imageUrls) {
+    public Product(Long id, String name, String description, String details, String richtextDetails, String color,
+            String size, WEIGHT_UNITS weightUnits, Integer weight,
+            Long stocks, Long price, Category category, ProductImage thumbnailImageUrl, List<ProductImage> images) {
         this.id = id;
         this.name = name;
+        this.description = description;
+        this.details = details;
+        this.richtextDetails = richtextDetails;
         this.color = color;
         this.size = size;
         this.weightUnits = weightUnits;
@@ -168,7 +184,7 @@ public class Product {
         this.price = price;
         this.category = category;
         this.thumbnailImageUrl = thumbnailImageUrl;
-        this.imageUrls = imageUrls;
+        this.images = images;
     }
 
     public Long getId() {
@@ -189,6 +205,14 @@ public class Product {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getRichtextDetails() {
+        return richtextDetails;
+    }
+
+    public void setRichtextDetails(String details) {
+        this.richtextDetails = details;
     }
 
     public String getDetails() {
@@ -311,12 +335,12 @@ public class Product {
         this.thumbnailImageUrl = thumbnailImageUrl;
     }
 
-    public List<ProductImage> getImageUrls() {
-        return imageUrls;
+    public List<ProductImage> getImages() {
+        return images;
     }
 
-    public void setImageUrls(List<ProductImage> imageUrls) {
-        this.imageUrls = imageUrls;
+    public void setImages(List<ProductImage> imageUrls) {
+        this.images = imageUrls;
     }
 
     public Long getAddedTime() {
@@ -327,7 +351,55 @@ public class Product {
         this.addedTime = added_time;
     }
 
-    public JSONObject toJSON() {
-        return new JSONObject(this);
+    public JSONObject toJSON(Boolean isSystemDataExcluded, Boolean isComplexImageFieldExcluded) {
+        JSONObject data = new JSONObject(this);
+
+        if (isSystemDataExcluded) {
+            for (String field : getSystemFields()) {
+                if (data.has(field)) {
+                    data.remove(field);
+                }
+            }
+        }
+        // if (isComplexImageFieldExcluded &&
+        // data.has(ProductConstants.LowerCase.IMAGES)) {
+        // List<ProductImage> productImages =
+        // data.get(ProductConstants.LowerCase.IMAGES) != null ? this.images : null;
+        // data.remove(ProductConstants.LowerCase.IMAGES);
+        // if (productImages != null) {
+        // JSONArray imagesData = productImages.stream()
+        // .map(obj -> {
+        // JSONObject values = obj.toJSON();
+        // values.remove("imageType");
+        // return values;
+        // })
+        // .collect(Collectors.collectingAndThen(Collectors.toList(), JSONArray::new));
+        // data.put(ProductConstants.LowerCase.IMAGES, imagesData);
+        // } else {
+        // data.put(ProductConstants.LowerCase.IMAGES, JSONObject.NULL);
+        // }
+        // }
+        // if (isComplexImageFieldExcluded && data.has("thumbnailImageUrl")) {
+        // ProductImage thumbnailImage = data.get("thumbnailImageUrl") != null
+        // ? this.thumbnailImageUrl
+        // : null;
+        // data.remove("thumbnailImageUrl");
+        // if (thumbnailImage != null) {
+        // data.put("thumbnailImageUrl", thumbnailImage.getImageUrl());
+        // } else {
+        // data.put("thumbnailImageUrl", JSONObject.NULL);
+        // }
+        // }
+        return data;
+    }
+
+    private List<String> getSystemFields() {
+        List<String> systemFields = new ArrayList<>();
+        systemFields.add("isVisible");
+        systemFields.add("category");
+        systemFields.add("toBeDeleted");
+        systemFields.add("toBeDeletedStatusChangeTime");
+        systemFields.add("addedTime");
+        return systemFields;
     }
 }

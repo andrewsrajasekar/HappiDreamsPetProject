@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from '../components/Sidebar';
 import MainBoard from '../components/AdminComponents/HomePage/MainBoard';
 import TopProducts from '../components/AdminComponents/HomePage/TopProducts';
-import Category from '../components/AdminComponents/HomePage/Category';
+import HomeCategory from '../components/AdminComponents/HomePage/HomeCategory';
 import InventoryMainpage from '../components/AdminComponents/Inventory/InventoryMainPage';
 import AboutUs from '../components/AdminComponents/AboutUs/AboutUs';
 
@@ -33,7 +33,7 @@ function AdminPanel(){
                     label: "Category",
                     handleTabChange: function(){
                       setRenderContent(
-                        <Category />
+                        <HomeCategory />
                       );
                     }
                   }

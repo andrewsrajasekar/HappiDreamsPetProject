@@ -1,5 +1,6 @@
 package com.happidreampets.app.controller;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -8,12 +9,14 @@ import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartFile;
@@ -42,7 +45,8 @@ import com.happidreampets.app.utils.AccessLevel;
 import com.happidreampets.app.utils.JSONUtils;
 
 @RestController
-@RequestMapping("/")
+@CrossOrigin(origins = "*")
+@RequestMapping("")
 public class OtherDataController extends APIController {
 
     private Animal currentAnimal;
@@ -373,17 +377,40 @@ public class OtherDataController extends APIController {
         }
     }
 
-    @RequestMapping(value = "/animal/{animalId}", method = RequestMethod.GET)
-    public ResponseEntity<String> getAnimal() {
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/animals/all", method = RequestMethod.GET)
+    public ResponseEntity<String> getAllAnimalsData() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
             DbFilter dbFilter = new DbFilter();
             dbFilter.setFormat(DATAFORMAT.JSON);
-            dbFilter.setStartIndex(0);
-            dbFilter.setLimitIndex(0);
+            dbFilter.setStartIndex(-1);
+            dbFilter.setLimitIndex(-1);
+            dbFilter.setSortColumn(ANIMALCOLUMN.NAME);
             AnimalCRUD animalCRUD = getAnimalCRUD();
             animalCRUD.setDbFilter(dbFilter);
-            JSONObject data = currentAnimal.toJSON();
+            JSONObject data = animalCRUD.getAllAnimals();
+            successResponse = new SuccessResponse();
+            if (data.has(ProductConstants.LowerCase.DATA)
+                    && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
+                successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
+            } else {
+                successResponse.setApiResponseStatus(HttpStatus.OK);
+            }
+            successResponse.setResponseData(data);
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @RequestMapping(value = "/animal/{animalId}", method = RequestMethod.GET)
+    public ResponseEntity<String> getAnimal() {
+        SuccessResponse successResponse = new SuccessResponse();
+        try {
+            JSONObject data = currentAnimal.toJSON(Boolean.TRUE, Boolean.TRUE);
             successResponse = new SuccessResponse();
             if (data.has(ProductConstants.LowerCase.DATA)
                     && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
@@ -425,12 +452,12 @@ public class OtherDataController extends APIController {
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, animal.getId()));
             return successResponse.getResponse();
         } catch (Exception ex) {
-            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
-            productControllerExceptions.setException(ex);
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
             if (!errorData.isEmpty()) {
-                productControllerExceptions.setData(errorData);
+                otherDataControllerExceptions.setData(errorData);
             }
-            return productControllerExceptions.returnResponseBasedOnException();
+            return otherDataControllerExceptions.returnResponseBasedOnException();
         }
     }
 
@@ -445,7 +472,7 @@ public class OtherDataController extends APIController {
 
             Animal animal = animalCRUD.updateAnimal(currentAnimal.getId(),
                     JSONUtils.optString(body, ProductConstants.LowerCase.NAME, null),
-                    JSONUtils.optString(body, ProductConstants.LowerCase.DESCRIPTION, null), null);
+                    JSONUtils.optString(body, ProductConstants.LowerCase.DESCRIPTION, null));
 
             successResponse = new SuccessResponse();
             if (animal == null) {
@@ -456,34 +483,67 @@ public class OtherDataController extends APIController {
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, animal.getId()));
             return successResponse.getResponse();
         } catch (Exception ex) {
-            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
-            productControllerExceptions.setException(ex);
-            return productControllerExceptions.returnResponseBasedOnException();
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
         }
     }
 
     @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
-    @RequestMapping(value = "/animal/{animalId}/image", method = RequestMethod.POST)
-    public ResponseEntity<String> addAnimalImage(
-            @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile animalImage) {
+    @RequestMapping(value = "/animal/{animalId}", method = RequestMethod.DELETE)
+    public ResponseEntity<String> deleteAnimal() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
             AnimalCRUD animalCRUD = getAnimalCRUD();
-            String originalFilename = animalImage.getOriginalFilename();
-            if (!animalCRUD.isValidFileExtension(originalFilename)) {
-                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_IMAGE_FORMAT);
-            }
-            animalCRUD.addImageToAnimal(currentAnimal, animalImage.getInputStream(),
-                    animalCRUD.getExtension(originalFilename));
 
+            Boolean isDeleted = animalCRUD.deleteAnimalById(currentAnimal.getId());
+
+            successResponse = new SuccessResponse();
+            if (!isDeleted) {
+                throw new Exception();
+            } else {
+                successResponse.setApiResponseStatus(HttpStatus.OK);
+            }
+            successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, currentAnimal.getId()));
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/animal/{animalId}/image", method = RequestMethod.PUT)
+    public ResponseEntity<String> addAnimalImage(
+            @RequestParam(ProductConstants.SnakeCase.IMAGE_TYPE) String imageType,
+            @RequestPart(required = false) MultipartFile animalImage,
+            @RequestBody(required = false) HashMap<String, String> requestBody) {
+        SuccessResponse successResponse = new SuccessResponse();
+        try {
+            ParameterCheck paramCheck = new ParameterCheck();
+            paramCheck.checkParameterForSingleUrlImage(imageType, animalImage, requestBody);
+            Boolean isFile = paramCheck.isFile(imageType);
+            AnimalCRUD animalCRUD = getAnimalCRUD();
+            if (isFile) {
+                String originalFilename = animalImage.getOriginalFilename();
+                if (!animalCRUD.isValidFileExtension(originalFilename)) {
+                    throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_IMAGE_FORMAT);
+                }
+                animalCRUD.addImageToAnimal(currentAnimal, animalImage.getInputStream(),
+                        animalCRUD.getExtension(originalFilename));
+            } else {
+                animalCRUD.addImageUrlToAnimal(currentAnimal, requestBody.get("url"));
+            }
             successResponse = new SuccessResponse();
             successResponse.setApiResponseStatus(HttpStatus.CREATED);
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, currentAnimal.getId()));
             return successResponse.getResponse();
+
         } catch (Exception ex) {
-            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
-            productControllerExceptions.setException(ex);
-            return productControllerExceptions.returnResponseBasedOnException();
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
         }
     }
 
@@ -500,9 +560,9 @@ public class OtherDataController extends APIController {
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, currentAnimal.getId()));
             return successResponse.getResponse();
         } catch (Exception ex) {
-            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
-            productControllerExceptions.setException(ex);
-            return productControllerExceptions.returnResponseBasedOnException();
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
         }
     }
 
@@ -525,7 +585,36 @@ public class OtherDataController extends APIController {
             dbFilter.setSortColumn(CATEGORYCOLUMN.NAME);
             CategoryCRUD categoryCRUD = getCategoryCRUD();
             categoryCRUD.setDbFilter(dbFilter);
-            JSONObject data = categoryCRUD.getCategoryDetails(currentAnimal);
+            JSONObject data = categoryCRUD.getCategoryDetails(getCurrentAnimal());
+            successResponse = new SuccessResponse();
+            if (data.has(ProductConstants.LowerCase.DATA)
+                    && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
+                successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
+            } else {
+                successResponse.setApiResponseStatus(HttpStatus.OK);
+            }
+            successResponse.setResponseData(data);
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/animal/{animalId}/categories/all", method = RequestMethod.GET)
+    public ResponseEntity<String> getAllCategoriesData() {
+        SuccessResponse successResponse = new SuccessResponse();
+        try {
+            DbFilter dbFilter = new DbFilter();
+            dbFilter.setFormat(DATAFORMAT.JSON);
+            dbFilter.setStartIndex(-1);
+            dbFilter.setLimitIndex(-1);
+            dbFilter.setSortColumn(ANIMALCOLUMN.NAME);
+            CategoryCRUD categoryCRUD = getCategoryCRUD();
+            categoryCRUD.setDbFilter(dbFilter);
+            JSONObject data = categoryCRUD.getAllCategories(getCurrentAnimal());
             successResponse = new SuccessResponse();
             if (data.has(ProductConstants.LowerCase.DATA)
                     && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
@@ -552,7 +641,7 @@ public class OtherDataController extends APIController {
             dbFilter.setLimitIndex(0);
             CategoryCRUD categoryCRUD = getCategoryCRUD();
             categoryCRUD.setDbFilter(dbFilter);
-            JSONObject data = currentCategory.toJSON();
+            JSONObject data = currentCategory.toJSON(Boolean.TRUE, Boolean.TRUE);
             successResponse = new SuccessResponse();
             if (data.has(ProductConstants.LowerCase.DATA)
                     && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
@@ -584,7 +673,7 @@ public class OtherDataController extends APIController {
                 throw new Exception(ProductConstants.ExceptionMessageCase.MISSING_PRODUCT_FIELD_FOR_CREATE);
             }
             Category category = categoryCRUD.createCategory(body.get(ProductConstants.LowerCase.NAME).toString(),
-                    body.get(ProductConstants.LowerCase.DESCRIPTION).toString(), null, currentAnimal);
+                    body.get(ProductConstants.LowerCase.DESCRIPTION).toString(), currentAnimal);
             successResponse = new SuccessResponse();
             if (category == null) {
                 throw new Exception();
@@ -612,10 +701,9 @@ public class OtherDataController extends APIController {
 
             CategoryCRUD categoryCRUD = getCategoryCRUD();
 
-            Category category = categoryCRUD.updateCategory(currentAnimal.getId(),
+            Category category = categoryCRUD.updateCategory(currentCategory.getId(),
                     JSONUtils.optString(body, ProductConstants.LowerCase.NAME, null),
                     JSONUtils.optString(body, ProductConstants.LowerCase.DESCRIPTION, null),
-                    null,
                     null);
 
             successResponse = new SuccessResponse();
@@ -634,18 +722,51 @@ public class OtherDataController extends APIController {
     }
 
     @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
-    @RequestMapping(value = "/animal/{animalId}/category/{categoryId}/image", method = RequestMethod.POST)
-    public ResponseEntity<String> addCategoryImage(
-            @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile categoryImage) {
+    @RequestMapping(value = "/animal/{animalId}/category/{categoryId}", method = RequestMethod.DELETE)
+    public ResponseEntity<String> deleteCategory() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
             CategoryCRUD categoryCRUD = getCategoryCRUD();
-            String originalFilename = categoryImage.getOriginalFilename();
-            if (!categoryCRUD.isValidFileExtension(originalFilename)) {
-                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_IMAGE_FORMAT);
+
+            Boolean isDeleted = categoryCRUD.deleteCategoryById(currentCategory.getId());
+
+            successResponse = new SuccessResponse();
+            if (!isDeleted) {
+                throw new Exception();
+            } else {
+                successResponse.setApiResponseStatus(HttpStatus.OK);
             }
-            categoryCRUD.addImageToCategory(currentCategory, categoryImage.getInputStream(),
-                    categoryCRUD.getExtension(originalFilename));
+            successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, currentCategory.getId()));
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/animal/{animalId}/category/{categoryId}/image", method = RequestMethod.PUT)
+    public ResponseEntity<String> addCategoryImage(
+            @RequestParam(ProductConstants.SnakeCase.IMAGE_TYPE) String imageType,
+            @RequestPart(required = false) MultipartFile categoryImage,
+            @RequestBody(required = false) HashMap<String, String> requestBody) {
+        SuccessResponse successResponse = new SuccessResponse();
+        try {
+            ParameterCheck paramCheck = new ParameterCheck();
+            paramCheck.checkParameterForSingleUrlImage(imageType, categoryImage, requestBody);
+            Boolean isFile = paramCheck.isFile(imageType);
+            CategoryCRUD categoryCRUD = getCategoryCRUD();
+            if (isFile) {
+                String originalFilename = categoryImage.getOriginalFilename();
+                if (!categoryCRUD.isValidFileExtension(originalFilename)) {
+                    throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_IMAGE_FORMAT);
+                }
+                categoryCRUD.addImageToCategory(currentCategory, categoryImage.getInputStream(),
+                        categoryCRUD.getExtension(originalFilename));
+            } else {
+                categoryCRUD.addImageUrlToCategory(currentCategory, requestBody.get("url"));
+            }
 
             successResponse = new SuccessResponse();
             successResponse.setApiResponseStatus(HttpStatus.CREATED);

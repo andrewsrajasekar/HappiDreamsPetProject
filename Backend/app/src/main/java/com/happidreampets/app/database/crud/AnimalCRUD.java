@@ -25,6 +25,7 @@ import com.happidreampets.app.controller.APIController.ERROR_CODES;
 import com.happidreampets.app.constants.AnimalConstants.ExceptionMessageCase;
 import com.happidreampets.app.constants.AnimalConstants.LowerCase;
 import com.happidreampets.app.database.model.Animal;
+import com.happidreampets.app.database.model.AnimalOrCategoryImage;
 import com.happidreampets.app.database.model.Animal.ANIMALCOLUMN;
 import com.happidreampets.app.database.repository.AnimalRepository;
 import com.happidreampets.app.database.utils.DbFilter;
@@ -76,7 +77,7 @@ public class AnimalCRUD {
             if (getDbFilter().getFormat().equals(DATAFORMAT.JSON)) {
                 JSONArray responseArray = new JSONArray();
                 data.forEach(row -> {
-                    responseArray.put(row.toJSON());
+                    responseArray.put(row.toJSON(Boolean.TRUE, Boolean.TRUE));
                 });
                 responseData.put(ProductConstants.LowerCase.DATA, responseArray);
             } else if (getDbFilter().getFormat().equals(DATAFORMAT.POJO)) {
@@ -99,7 +100,21 @@ public class AnimalCRUD {
         pageData.put(ProductConstants.SnakeCase.PER_PAGE, animalsPage.getSize());
         pageData.put(ProductConstants.LowerCase.COUNT, animalsPage.getContent().size());
         pageData.put(ProductConstants.SnakeCase.MORE_RECORDS, animalsPage.hasNext());
+        pageData.put(ProductConstants.SnakeCase.TOTAL_RECORDS, animalsPage.getTotalElements());
         return pageData;
+    }
+
+    public JSONObject getAllAnimals() {
+        JSONObject animals = new JSONObject();
+        Sort sort = null;
+        if (getDbFilter() != null && checkAndGetColumnName() != null) {
+            sort = Sort.by(getDbFilter().getSortDirection(), checkAndGetColumnName().getColumnName());
+        }
+        List<Animal> animalsData = sort != null ? animalRepository.findAllByToBeDeletedIsFalse(sort)
+                : animalRepository.findAllByToBeDeletedIsFalse();
+        animals.put(ProductConstants.LowerCase.DATA,
+                getDataInRequiredFormat(animalsData).get(ProductConstants.LowerCase.DATA));
+        return animals;
     }
 
     public JSONObject getAnimals() {
@@ -124,7 +139,7 @@ public class AnimalCRUD {
         if (animal == null) {
             return null;
         } else {
-            return animal.toJSON();
+            return animal.toJSON(false, false);
         }
     }
 
@@ -140,7 +155,7 @@ public class AnimalCRUD {
         return animalRepository.save(animal);
     }
 
-    public Animal updateAnimal(Long id, String name, String description, String image) throws Exception {
+    public Animal updateAnimal(Long id, String name, String description) throws Exception {
         Animal animal = animalRepository.findByIdAndToBeDeletedIsFalse(id);
         if (null == animal) {
             throw new Exception(ExceptionMessageCase.ANIMAL_NOT_FOUND);
@@ -150,9 +165,6 @@ public class AnimalCRUD {
         }
         if (description != null) {
             animal.setDescription(description);
-        }
-        if (image != null) {
-            animal.setImage(image);
         }
         return animalRepository.save(animal);
     }
@@ -219,9 +231,28 @@ public class AnimalCRUD {
         return fileFullName.substring(fileFullName.lastIndexOf(ProductConstants.SpecialCharacter.DOT) + 1);
     }
 
+    public void checkForMaxImage(Animal animal) throws Exception {
+        AnimalOrCategoryImage existingImage = animal.getImage();
+        if (existingImage != null) {
+            throw new Exception(ExceptionMessageCase.MAXIMUM_IMAGES_FOR_ANIMAL_REACHED);
+        }
+    }
+
+    public void addImageUrlToAnimal(Animal animal, String imageUrl) throws Exception {
+        AnimalOrCategoryImage existingImage = animal.getImage();
+        if (existingImage != null) {
+            throw new Exception(ExceptionMessageCase.MAXIMUM_IMAGES_FOR_ANIMAL_REACHED);
+        }
+        existingImage = new AnimalOrCategoryImage();
+        existingImage.setImageUrl(imageUrl);
+        existingImage.setImageType("external_url");
+        animal.setImage(existingImage);
+        animalRepository.save(animal);
+    }
+
     public void addImageToAnimal(Animal animal, InputStream image, String extension) throws Exception {
         String ANIMAL_IMAGE_FOLDER = ANIMALS_IMAGE_LOCATION_FULL;
-        String existingImage = animal.getImage();
+        AnimalOrCategoryImage existingImage = animal.getImage();
         if (existingImage != null) {
             throw new Exception(ExceptionMessageCase.MAXIMUM_IMAGES_FOR_ANIMAL_REACHED);
         }
@@ -229,21 +260,25 @@ public class AnimalCRUD {
                 ANIMAL_IMAGE_FOLDER + ProductConstants.SpecialCharacter.SLASH
                         + getFileName(animal.getId(), extension));
         addImageToServer(image, path);
-        existingImage = ANIMALS_IMAGE_LOCATION_FROM_STATIC + ProductConstants.SpecialCharacter.SLASH
-                + getFileName(animal.getId(), extension);
+        existingImage = new AnimalOrCategoryImage();
+        existingImage.setImageUrl(ANIMALS_IMAGE_LOCATION_FROM_STATIC + ProductConstants.SpecialCharacter.SLASH
+                + getFileName(animal.getId(), extension));
+        existingImage.setImageType("file");
         animal.setImage(existingImage);
         animalRepository.save(animal);
     }
 
     public void deleteImageFromAnimal(Animal animal) throws Exception {
         String ANIMAL_IMAGE_FOLDER = ANIMALS_IMAGE_LOCATION_BEFORE_STATIC;
-        String animalImage = animal.getImage();
+        AnimalOrCategoryImage animalImage = animal.getImage();
         if (animalImage == null) {
             throw new Exception(ExceptionMessageCase.NO_IMAGE_PRESENT_FOR_ANIMAL);
         }
-        Path path = Paths.get(
-                ANIMAL_IMAGE_FOLDER + SpecialCharacter.SLASH + animalImage);
-        deleteImageFromServer(path);
+        if (animalImage.getImageType().equals("file")) {
+            Path path = Paths.get(
+                    ANIMAL_IMAGE_FOLDER + SpecialCharacter.SLASH + animalImage);
+            deleteImageFromServer(path);
+        }
         animal.setImage(null);
         animalRepository.save(animal);
     }

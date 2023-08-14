@@ -44,6 +44,7 @@ public class UserAddressConstants {
 
     public class ExceptionMessageCase {
         public static final String INVALID_USER_ADDRESS_ID = "Invalid User Address Id";
+        public static final String ADDRESS_ID_ALREADY_SETTED_AS_DEFAULT = "Address Id is already setted up as default";
         public static final String MISSING_USER_ADDRESS_FIELD_FOR_CREATE_USER_ADDRESS = "Missing User Address Field For Create User Address";
         public static final String MISSING_USER_ADDRESS_FIELD_FOR_UPDATE_USER_ADDRESS = "Missing User Address Field For Update User Address";
     }

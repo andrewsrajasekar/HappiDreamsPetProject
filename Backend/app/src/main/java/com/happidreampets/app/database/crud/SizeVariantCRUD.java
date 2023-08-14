@@ -106,6 +106,7 @@ public class SizeVariantCRUD {
         SizeVariant sizeVariant = new SizeVariant();
         sizeVariant.setProduct(product);
         sizeVariant.setVariantId(variantId);
+        sizeVariant.setAddedTime(System.currentTimeMillis());
 
         return sizeVariantRepository.save(sizeVariant);
     }

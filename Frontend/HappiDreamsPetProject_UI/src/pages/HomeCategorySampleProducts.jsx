@@ -10,20 +10,25 @@ import '@splidejs/react-splide/css/core';
 import { useEffect, useState } from 'react';
 
 
-function HomeCategorySampleProducts({categorySampleProducts, showManipulateButtons, handleDeleteSection, handleEditSection}){
-  const [currentCategorySampleProduct, setCurrentCategorySampleProduct] = useState(categorySampleProducts[0]);
+function HomeCategorySampleProducts({categorySampleProducts, showManipulateButtons, handleDeleteSection, handleEditSection, showEmptyMessage}){
+  const isCategorySampleProductEmpty = categorySampleProducts.length <= 0;
+  const showEmptyElement = showEmptyMessage !== undefined ? showEmptyMessage : false;
+  const [currentCategorySampleProduct, setCurrentCategorySampleProduct] = useState(isCategorySampleProductEmpty ? {} : categorySampleProducts[0]);
   const [currentCategorySampleProductIndex, setCurrentCategorySampleProductIndex] = useState(0);
 
   let currentCategorySampleProductSize = 0;
-  currentCategorySampleProduct["products"].map((element) => {
-    currentCategorySampleProductSize++;
-  });
+  if(!isCategorySampleProductEmpty){
+    currentCategorySampleProduct["products"].map((element) => {
+      currentCategorySampleProductSize++;
+    });
+  }
+
 
   let categorySampleProductsSize = categorySampleProducts.length;
   let mdwidthClassName = "md:w-1/" + (currentCategorySampleProductSize > 4 ? 4 : currentCategorySampleProductSize); 
   //let paddingClassName = "p-" + currentCategorySampleProductSize; 
 
-  const productsData = currentCategorySampleProduct["products"].map((element, index) => {
+  const productsData = isCategorySampleProductEmpty ? "" : currentCategorySampleProduct["products"].map((element, index) => {
     return(
       <div className={`${mdwidthClassName} sm:mb-0 mb-6`} key={`category_sample_product_${index}`} id={`category_sample_product_${index}`} style={{flex: "0 0 calc(33.33% - 2rem)", margin: "4px"}}>
         <div className="rounded-lg h-64 overflow-hidden">
@@ -59,7 +64,13 @@ const onPrevCategoryClick = () => {
 
 return(
 <section className="text-gray-600 body-font">
-  <div className="mx-auto px-5 py-14 mx-auto">
+  {isCategorySampleProductEmpty && showEmptyElement && 
+    <div>
+      No Category Selected For Top Categories Section
+    </div>
+  }
+  {!isCategorySampleProductEmpty && 
+    <div className="mx-auto px-5 py-14 mx-auto">
     <div className="flex flex-col">
       <div className="h-1 bg-gray-200 rounded overflow-hidden">
         <div className={`h-full bg-indigo-500`} style={{ width: `${progressBarWidth}%` }}></div>
@@ -81,6 +92,8 @@ return(
       {productsData}
     </div>
   </div>
+  }
+
 </section>
 );
 }

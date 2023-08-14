@@ -9,8 +9,8 @@ export default function LoginFormExtra(){
   }
 
     return(
-        <div className="flex items-center justify-between ">
-        <div className="flex items-center">
+        <div className="">
+        {/* <div className="flex items-center">
           <input
             id="remember-me"
             name="remember-me"
@@ -20,7 +20,7 @@ export default function LoginFormExtra(){
           <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
             Remember me
           </label>
-        </div>
+        </div> */}
 
         <div className="text-right text-sm">
           <span onClick={goToForgotPassword} className="font-medium text-purple-600 hover:text-purple-500 cursor-pointer">

@@ -106,6 +106,7 @@ public class WeightVariantCRUD {
         WeightVariant weightVariant = new WeightVariant();
         weightVariant.setProduct(product);
         weightVariant.setVariantId(variantId);
+        weightVariant.setAddedTime(System.currentTimeMillis());
 
         return weightVariantRepository.save(weightVariant);
     }

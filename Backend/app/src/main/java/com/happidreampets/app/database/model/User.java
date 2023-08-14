@@ -10,8 +10,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 @Entity
@@ -41,7 +39,11 @@ public class User {
         EMAIL("email"),
         PHONE_EXTENSION("phone_extension"),
         PHONE_NUMBER("phone_number"),
-        DEFAULT_ADDRESS_ID("default_address_id");
+        ROLE("role"),
+        CONFIRMATION_CODE("confirmation_code"),
+        FORGOT_PASSWORD_OTP("forgot_password_code"),
+        USER_CONFIRMED("user_confirmed"),
+        ADDED_TIME("added_time");
 
         private final String columnName;
 
@@ -74,13 +76,18 @@ public class User {
     @Column(name = "phone_number")
     private String phone_number;
 
-    @OneToOne
-    @JoinColumn(name = "default_address_id")
-    private UserAddress defaultAddress;
-
     @Column(name = "role")
     @Convert(converter = UserRoleConverter.class)
     private USER_ROLE role;
+
+    @Column(name = "confirmation_code")
+    private String confirmationCode;
+
+    @Column(name = "forgot_password_code")
+    private String forgotPasswordCode;
+
+    @Column(name = "user_confirmed")
+    private Boolean userConfirmed;
 
     @Column(name = "added_time")
     private Long addedTime;
@@ -132,20 +139,36 @@ public class User {
         this.phone_number = phone_number;
     }
 
-    public UserAddress getDefaultAddress() {
-        return defaultAddress;
-    }
-
-    public void setDefaultAddress(UserAddress defaultAddress) {
-        this.defaultAddress = defaultAddress;
-    }
-
     public USER_ROLE getRole() {
         return role;
     }
 
     public void setRole(USER_ROLE role) {
         this.role = role;
+    }
+
+    public String getConfirmationCode() {
+        return confirmationCode;
+    }
+
+    public void setConfirmationCode(String confirmationCode) {
+        this.confirmationCode = confirmationCode;
+    }
+
+    public String getForgotPasswordCode() {
+        return forgotPasswordCode;
+    }
+
+    public void setForgotPasswordCode(String forgotPasswordCode) {
+        this.forgotPasswordCode = forgotPasswordCode;
+    }
+
+    public Boolean getUserConfirmed() {
+        return userConfirmed;
+    }
+
+    public void setUserConfirmed(Boolean userConfirmed) {
+        this.userConfirmed = userConfirmed;
     }
 
     public Long getAddedTime() {

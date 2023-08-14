@@ -1,6 +1,9 @@
 package com.happidreampets.app.controller;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -8,10 +11,13 @@ import java.util.logging.Logger;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.constants.UserConstants;
@@ -36,6 +42,7 @@ import com.happidreampets.app.database.crud.UserAddressCRUD;
 import com.happidreampets.app.database.crud.UserCRUD;
 import com.happidreampets.app.database.crud.WeightVariantCRUD;
 import com.happidreampets.app.database.model.User;
+import com.happidreampets.app.database.model.Product.PRODUCTCOLUMN;
 import com.happidreampets.app.constants.ControllerConstants.LoggerCase;
 import com.happidreampets.app.constants.ControllerConstants.LowerCase;
 import com.happidreampets.app.constants.ControllerConstants.MessageCase;
@@ -46,8 +53,9 @@ import com.happidreampets.app.constants.ControllerConstants.ExceptionMessageCase
 
 import jakarta.ws.rs.core.MediaType;
 
+@RestController
 public class APIController {
-    private static final Logger LOG = Logger.getLogger(ProductController.class.getName());
+    private static final Logger LOG = Logger.getLogger(APIController.class.getName());
 
     public enum ERROR_CODES {
         INVALID_INPUT("INVALID_INPUT"),
@@ -61,8 +69,10 @@ public class APIController {
         RESOURCE_NOT_FOUND("RESOURCE_NOT_FOUND"),
         MAXIMUM_RESOURCE_CREATED("MAXIMUM_RESOURCE_CREATED"),
         UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS"),
+        USER_NOT_CONFIRMED("USER_NOT_CONFIRMED"),
         INVALID_CREDENTIALS("INVALID_CREDENTIALS"),
         INVALID_AUTH_TOKEN("INVALID_AUTH_TOKEN"),
+        EXPIRED_AUTH_TOKEN("EXPIRED_AUTH_TOKEN"),
         FORBIDDEN_OPERATION("FORBIDDEN_OPERATION"),
         REQUEST_TIMEOUT("REQUEST_TIMEOUT"),
         RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED"),
@@ -438,6 +448,43 @@ public class APIController {
             }
             LOG.log(Level.SEVERE, LoggerCase.EXCEPTION + getException().getMessage());
             switch (exception.getMessage()) {
+                case ControllerConstants.ExceptionMessageCase.INVALID_FILE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse.setData(new JSONObject().put(LowerCase.ERROR, "Upload a valid file"));
+                    return failureResponse.throwInvalidBodyInput();
+                case ControllerConstants.ExceptionMessageCase.REQUEST_BODY_IS_MISSING:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse.setData(new JSONObject().put(LowerCase.ERROR, "Request body is missing"));
+                    return failureResponse.throwInvalidBodyInput();
+                case ControllerConstants.ExceptionMessageCase.INVALID_IMAGE_TYPE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(new JSONObject().put(LowerCase.ERROR, "Image Type Parameter Value is invalid"));
+                    return failureResponse.throwInvalidInput();
+                case ProductConstants.ExceptionMessageCase.INVALID_PRICE_MIN_VALUE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(new JSONObject().put(LowerCase.PARAMETER, ProductConstants.SnakeCase.PRICE_MIN)
+                                    .put(LowerCase.MESSAGE, ProductConstants.MessageCase.INVALID_PRICE_MIN_VALUE));
+                    return failureResponse.throwInvalidInput();
+                case ProductConstants.ExceptionMessageCase.INVALID_PRICE_MAX_VALUE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(new JSONObject().put(LowerCase.PARAMETER, ProductConstants.SnakeCase.PRICE_MAX)
+                                    .put(LowerCase.MESSAGE, ProductConstants.MessageCase.INVALID_PRICE_MAX_VALUE));
+                    return failureResponse.throwInvalidInput();
+                case ProductConstants.ExceptionMessageCase.INVALID_SORT_ORDER_VALUE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(new JSONObject().put(LowerCase.PARAMETER, ProductConstants.SnakeCase.SORT_ORDER)
+                                    .put(LowerCase.MESSAGE, ProductConstants.MessageCase.INVALID_SORT_ORDER));
+                    return failureResponse.throwInvalidInput();
+                case ProductConstants.ExceptionMessageCase.INVALID_SORT_BY_VALUE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(new JSONObject().put(LowerCase.PARAMETER, ProductConstants.SnakeCase.SORT_BY)
+                                    .put(LowerCase.MESSAGE, ProductConstants.MessageCase.INVALID_SORT_BY));
+                    return failureResponse.throwInvalidInput();
                 case ProductConstants.ExceptionMessageCase.PAGE_GREATER_THAN_ZERO:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse.setData(new JSONObject().put(LowerCase.PARAMETER, ProductConstants.LowerCase.PAGE)
@@ -470,6 +517,15 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "Only JPG, JPEG, and PNG files are allowed."));
                     return failureResponse.throwInvalidBodyInput();
+                case ProductConstants.ExceptionMessageCase.MAXIMUM_IMAGES_FOR_PRODUCT_WILL_BE_REACHED_FOR_IMAGEURL:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD, ProductConstants.LowerCase.IMAGE)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Maximum Number of Images that can be created for a Product Will be Reached"));
+                    return failureResponse.throwMaximumResourceCreated();
                 case ProductConstants.ExceptionMessageCase.MAXIMUM_IMAGES_FOR_PRODUCT_REACHED:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse
@@ -629,6 +685,19 @@ public class APIController {
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse.setData(getData());
                     return failureResponse.throwInvalidBodyInput();
+                case ControllerConstants.ExceptionMessageCase.INVALID_FILE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse.setData(new JSONObject().put(LowerCase.ERROR, "Upload a valid file"));
+                    return failureResponse.throwInvalidBodyInput();
+                case ControllerConstants.ExceptionMessageCase.REQUEST_BODY_IS_MISSING:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse.setData(new JSONObject().put(LowerCase.ERROR, "Request body is missing"));
+                    return failureResponse.throwInvalidBodyInput();
+                case ControllerConstants.ExceptionMessageCase.INVALID_IMAGE_TYPE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(new JSONObject().put(LowerCase.ERROR, "Image Type Parameter Value is invalid"));
+                    return failureResponse.throwInvalidInput();
                 case CategoryConstants.ExceptionMessageCase.CATEGORY_NOT_FOUND:
                     failureResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
                     failureResponse
@@ -756,6 +825,8 @@ public class APIController {
                 case UserConstants.ExceptionMessageCase.MISSING_USER_FIELD_FOR_AUTHENTICATION:
                 case UserConstants.ExceptionMessageCase.MISSING_USER_FIELD_FOR_CREATE_USER:
                 case UserConstants.ExceptionMessageCase.MISSING_USER_FIELD_FOR_UPDATE_USER:
+                case UserConstants.ExceptionMessageCase.MISSING_USER_FIELD_FOR_CONFIRM_USER:
+                case UserConstants.ExceptionMessageCase.MISSING_USER_FIELD_FOR_TRIGGER_CHANGE_PASSWORD_OTP:
                 case UserAddressConstants.ExceptionMessageCase.MISSING_USER_ADDRESS_FIELD_FOR_CREATE_USER_ADDRESS:
                 case UserAddressConstants.ExceptionMessageCase.MISSING_USER_ADDRESS_FIELD_FOR_UPDATE_USER_ADDRESS:
                 case CartConstants.ExceptionMessageCase.MISSING_CART_FIELD_FOR_ADD_CART_PRODUCTS:
@@ -764,6 +835,30 @@ public class APIController {
                 case OrderHistoryConstants.ExceptionMessageCase.MISSING_ORDER_HISTORY_FIELD_FOR_CREATE:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse.setData(getData());
+                    return failureResponse.throwInvalidBodyInput();
+                case UserConstants.ExceptionMessageCase.USER_NOT_CONFIRMED:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse.setCode(ERROR_CODES.USER_NOT_CONFIRMED);
+                    failureResponse.setMessage("User not Confirmed. Kindly Confirm the User to proceed.");
+                    failureResponse.setData(getData());
+                    return failureResponse.getResponse();
+                case UserConstants.ExceptionMessageCase.EMAIL_ALREADY_EXISTS:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse.setData(new JSONObject()
+                            .put(ProductConstants.LowerCase.FIELD, UserConstants.LowerCase.EMAIL)
+                            .put(LowerCase.MESSAGE, "Email Address Already Exist"));
+                    return failureResponse.throwInvalidBodyInput();
+                case UserConstants.ExceptionMessageCase.INVALID_CONFIRMATION_CODE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse.setData(new JSONObject()
+                            .put(ProductConstants.LowerCase.FIELD, UserConstants.SnakeCase.CONFIRMATION_CODE)
+                            .put(LowerCase.MESSAGE, "Invalid Confirmation Code"));
+                    return failureResponse.throwInvalidBodyInput();
+                case UserConstants.ExceptionMessageCase.INVALID_USER_ID_IN_BODY:
+                    failureResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
+                    failureResponse.setData(new JSONObject()
+                            .put(ProductConstants.LowerCase.FIELD, UserConstants.SnakeCase.USER_ID)
+                            .put(LowerCase.MESSAGE, "User Id is Invalid"));
                     return failureResponse.throwInvalidBodyInput();
                 case UserConstants.ExceptionMessageCase.INVALID_USER_ID:
                     failureResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
@@ -779,7 +874,12 @@ public class APIController {
                             .put(ControllerConstants.LowerCase.REASON,
                                     ControllerConstants.SnakeCase.INVALID_CREDENTIALS));
                     return failureResponse.throwInvalidCredentials();
-
+                case ControllerConstants.ExceptionMessageCase.AUTHENTICATION_TOKEN_DOES_NOT_EXIST:
+                    failureResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
+                    failureResponse.setCode(ERROR_CODES.FORBIDDEN_OPERATION);
+                    failureResponse.setMessage("User is not Logged In");
+                    failureResponse.setData(new JSONObject());
+                    return failureResponse.getResponse();
                 case UserAddressConstants.MessageCase.ADDRESS_COUNT_FOR_USER_IS_MAXIMUM:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse
@@ -796,6 +896,16 @@ public class APIController {
                             .put(ProductConstants.LowerCase.FIELD, UserAddressConstants.SnakeCase.ADDRESS_ID)
                             .put(LowerCase.MESSAGE, "Address Id is Invalid"));
                     return failureResponse.throwNotFoundForIds();
+                case UserAddressConstants.ExceptionMessageCase.ADDRESS_ID_ALREADY_SETTED_AS_DEFAULT:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    UserAddressConstants.SnakeCase.ADDRESS_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Address Id is already setted up as default Address"));
+                    return failureResponse.throwInvalidPathVariable();
                 case CartConstants.ExceptionMessageCase.CART_ALREADY_EXISTS_FOR_THIS_USER:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse
@@ -858,6 +968,90 @@ public class APIController {
                 default:
                     return failureResponse.getResponse();
             }
+        }
+    }
+
+    public class ParameterCheck {
+        public void checkParameterForSingleUrlImage(String imageType, MultipartFile animalImage,
+                HashMap<String, String> requestBody) throws Exception {
+            if ("file".equals(imageType)) {
+                if (animalImage == null || animalImage.isEmpty()) {
+                    throw new Exception(ExceptionMessageCase.INVALID_FILE);
+                }
+
+            } else if ("external_url".equals(imageType)) {
+                if (requestBody == null || requestBody.isEmpty()) {
+                    throw new Exception(ExceptionMessageCase.REQUEST_BODY_IS_MISSING);
+                }
+                if (!requestBody.containsKey("url")) {
+                    throw new Exception(ExceptionMessageCase.REQUEST_BODY_IS_MISSING);
+                }
+            } else {
+                throw new Exception(ExceptionMessageCase.INVALID_IMAGE_TYPE);
+            }
+        }
+
+        public void checkParameterForMultipleUrlImage(String imageType, MultipartFile animalImage,
+                List<HashMap<String, String>> requestBody) throws Exception {
+            if ("file".equals(imageType)) {
+                if (animalImage == null || animalImage.isEmpty()) {
+                    throw new Exception(ExceptionMessageCase.INVALID_FILE);
+                }
+
+            } else if ("external_url".equals(imageType)) {
+                if (requestBody == null || requestBody.isEmpty()) {
+                    throw new Exception(ExceptionMessageCase.REQUEST_BODY_IS_MISSING);
+                }
+                Iterator<HashMap<String, String>> requestBodyIter = requestBody.iterator();
+                while (requestBodyIter.hasNext()) {
+                    if (!requestBodyIter.next().containsKey("url")) {
+                        throw new Exception(ExceptionMessageCase.REQUEST_BODY_IS_MISSING);
+                    }
+                }
+            } else {
+                throw new Exception(ExceptionMessageCase.INVALID_IMAGE_TYPE);
+            }
+        }
+
+        public List<String> extractImageUrlFromHashmap(List<HashMap<String, String>> requestBody) {
+            List<String> imageUrls = new ArrayList<>();
+            for (HashMap<String, String> url : requestBody) {
+                imageUrls.add(url.get("url"));
+            }
+            return imageUrls;
+        }
+
+        public Boolean isFile(String imageType) {
+            return "file".equals(imageType);
+        }
+
+        public Boolean isUrl(String imageType) {
+            return "external_url".equals(imageType);
+        }
+
+        public void checkSortByAndSortOrderProductParameter(String sortOrder, String sortBy) throws Exception {
+            if (sortBy != null || sortOrder != null) {
+                if (!(sortOrder != null && (sortOrder.equalsIgnoreCase("asc") || sortOrder.equalsIgnoreCase("desc")))) {
+                    throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_SORT_ORDER_VALUE);
+                }
+                if (!(sortBy != null && (PRODUCTCOLUMN.NAME.getColumnName().equalsIgnoreCase(sortBy)
+                        || PRODUCTCOLUMN.PRICE.getColumnName().equalsIgnoreCase(sortBy)))) {
+                    throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_SORT_BY_VALUE);
+                }
+            }
+        }
+
+        public Sort.Direction getSortOrder(String sortOrder) {
+            return sortOrder.equalsIgnoreCase("asc") ? Sort.Direction.ASC
+                    : sortOrder.equalsIgnoreCase("desc") ? Sort.Direction.DESC : null;
+        }
+
+        public PRODUCTCOLUMN getProductColumnBasedOnSortBy(String sortBy) {
+            if (sortBy != null) {
+                return PRODUCTCOLUMN.NAME.getColumnName().equalsIgnoreCase(sortBy) ? PRODUCTCOLUMN.NAME
+                        : PRODUCTCOLUMN.PRICE.getColumnName().equalsIgnoreCase(sortBy) ? PRODUCTCOLUMN.PRICE : null;
+            }
+            return null;
         }
     }
 }
