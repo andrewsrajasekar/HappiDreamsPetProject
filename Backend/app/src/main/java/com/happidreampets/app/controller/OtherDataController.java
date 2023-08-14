@@ -7,6 +7,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,6 +38,7 @@ import com.happidreampets.app.database.model.Category.CATEGORYCOLUMN;
 import com.happidreampets.app.database.model.TopProducts;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
+import com.happidreampets.app.utils.AccessLevel;
 import com.happidreampets.app.utils.JSONUtils;
 
 @RestController
@@ -69,6 +71,14 @@ public class OtherDataController extends APIController {
 
     public void setCurrentCategory(Category currentCategory) {
         this.currentCategory = currentCategory;
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<String> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        FailureResponse failureResponse = new FailureResponse();
+        failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+        failureResponse.setData(new JSONObject().put(ControllerConstants.LowerCase.ERROR, "Invalid request body"));
+        return failureResponse.throwMandatoryMissing();
     }
 
     @ExceptionHandler(MultipartException.class)
@@ -120,6 +130,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/top-product", method = RequestMethod.POST)
     public ResponseEntity<String> addATopProduct(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -156,6 +167,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/top-products", method = RequestMethod.POST)
     public ResponseEntity<String> addTopProducts(@RequestBody List<Map<String, Object>> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -185,6 +197,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/top-product/{topProductId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteTopProduct(@PathVariable("topProductId") Long topProductId) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -244,6 +257,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/top-category", method = RequestMethod.POST)
     public ResponseEntity<String> addATopCategory(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -287,6 +301,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/top-category/{categoryId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteTopCategory() {
         SuccessResponse successResponse = new SuccessResponse();
@@ -304,6 +319,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/top-category/{categoryId}/product/{productId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteTopCategoryBasedOnProduct() {
         SuccessResponse successResponse = new SuccessResponse();
@@ -384,6 +400,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/animal", method = RequestMethod.POST)
     public ResponseEntity<String> createAnimal(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -417,6 +434,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/animal/{animalId}", method = RequestMethod.PUT)
     public ResponseEntity<String> updateAnimal(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -444,6 +462,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/animal/{animalId}/image", method = RequestMethod.POST)
     public ResponseEntity<String> addAnimalImage(
             @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile animalImage) {
@@ -468,6 +487,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/animal/{animalId}/image", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteAnimalImage() {
         SuccessResponse successResponse = new SuccessResponse();
@@ -549,6 +569,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/animal/{animalId}/category", method = RequestMethod.POST)
     public ResponseEntity<String> createCategory(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -582,6 +603,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/animal/{animalId}/category/{categoryId}", method = RequestMethod.PUT)
     public ResponseEntity<String> updateCategory(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -611,6 +633,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/animal/{animalId}/category/{categoryId}/image", method = RequestMethod.POST)
     public ResponseEntity<String> addCategoryImage(
             @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile categoryImage) {
@@ -635,6 +658,7 @@ public class OtherDataController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/animal/{animalId}/category/{categoryId}/image", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteCategoryImage() {
         SuccessResponse successResponse = new SuccessResponse();

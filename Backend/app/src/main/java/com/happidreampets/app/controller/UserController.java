@@ -4,8 +4,11 @@ import java.util.List;
 import java.util.Map;
 
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +21,7 @@ import com.happidreampets.app.constants.ControllerConstants;
 import com.happidreampets.app.constants.OrderHistoryConstants;
 import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.constants.UserAddressConstants;
+import com.happidreampets.app.constants.UserConstants;
 import com.happidreampets.app.constants.UserConstants.ExceptionMessageCase;
 import com.happidreampets.app.constants.UserConstants.LowerCase;
 import com.happidreampets.app.constants.UserConstants.SnakeCase;
@@ -33,11 +37,24 @@ import com.happidreampets.app.database.model.UserAddress;
 import com.happidreampets.app.database.model.User.USER_ROLE;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
+import com.happidreampets.app.security.jwt.JwtUtils;
+import com.happidreampets.app.utils.AccessLevel;
 import com.happidreampets.app.utils.JSONUtils;
 
 @RestController
 @RequestMapping("/")
 public class UserController extends APIController {
+
+    @Autowired
+    JwtUtils jwtUtils;
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<String> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        FailureResponse failureResponse = new FailureResponse();
+        failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+        failureResponse.setData(new JSONObject().put(ControllerConstants.LowerCase.ERROR, "Invalid request body"));
+        return failureResponse.throwMandatoryMissing();
+    }
 
     @RequestMapping(value = "/authenticate", method = RequestMethod.POST)
     public ResponseEntity<?> authenticateUser(@RequestBody Map<String, Object> bodyData) {
@@ -54,7 +71,23 @@ public class UserController extends APIController {
             }
             Boolean isUserValid = userCRUD.authenticateUserBasedOnEmailAndPassword(body.get(LowerCase.EMAIL).toString(),
                     body.get(LowerCase.PASSWORD).toString());
-            return null;
+
+            if (!isUserValid) {
+                throw new Exception(ExceptionMessageCase.INVALID_CREDENTIALS);
+            }
+            User user = userCRUD.getUserBasedOnEmailAndPassword(body.get(LowerCase.EMAIL).toString(),
+                    body.get(LowerCase.PASSWORD).toString());
+
+            JSONObject jwtData = jwtUtils.getJwtToken(user, true);
+
+            successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, user.getId())
+                    .put(UserConstants.LowerCase.NAME, user.getName())
+                    .put(UserConstants.LowerCase.EMAIL, user.getEmail())
+                    .put(UserConstants.LowerCase.PASSWORD, user.getPassword())
+                    .put(UserConstants.SnakeCase.ACCESS_TOKEN, jwtData.get(UserConstants.SnakeCase.ACCESS_TOKEN))
+                    .put(UserConstants.SnakeCase.EXPIRATION_DATE,
+                            jwtData.get(UserConstants.SnakeCase.EXPIRATION_TIME)));
+            return successResponse.getResponse();
         } catch (Exception ex) {
             UserControllerExceptions userControllerExceptions = new UserControllerExceptions();
             userControllerExceptions.setException(ex);
@@ -99,6 +132,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER, AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/user", method = RequestMethod.PUT)
     public ResponseEntity<?> updateUser(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -135,6 +169,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER, AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/user", method = RequestMethod.GET)
     public ResponseEntity<?> getuser() {
         SuccessResponse successResponse = new SuccessResponse();
@@ -150,6 +185,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/address", method = RequestMethod.GET)
     public ResponseEntity<?> getAllUserAddress() {
         SuccessResponse successResponse = new SuccessResponse();
@@ -180,6 +216,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/address/{addressId}", method = RequestMethod.GET)
     public ResponseEntity<?> getUserAddress(@PathVariable("addressId") Long addressId) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -210,6 +247,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/address", method = RequestMethod.POST)
     public ResponseEntity<?> addUserAddress(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -253,6 +291,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/address/{addressId}", method = RequestMethod.PUT)
     public ResponseEntity<?> updateUserAddress(@RequestBody Map<String, Object> bodyData,
             @PathVariable("addressId") Long addressId) {
@@ -299,6 +338,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/address/{addressId}/default", method = RequestMethod.PUT)
     public ResponseEntity<?> updateUserAddressAsDefault(@PathVariable("addressId") Long addressId) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -328,6 +368,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/address/{addressId}", method = RequestMethod.DELETE)
     public ResponseEntity<?> deleteUserAddress(@PathVariable("addressId") Long addressId) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -355,6 +396,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/cart", method = RequestMethod.GET)
     public ResponseEntity<?> getCartProducts() {
         SuccessResponse successResponse = new SuccessResponse();
@@ -382,6 +424,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/cart", method = RequestMethod.POST)
     public ResponseEntity<?> addCartProducts(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -421,6 +464,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/cart", method = RequestMethod.PUT)
     public ResponseEntity<?> updateCartProducts(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -460,6 +504,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/cart", method = RequestMethod.DELETE)
     public ResponseEntity<?> deleteCartProducts(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -498,6 +543,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/orderhistory", method = RequestMethod.GET)
     public ResponseEntity<?> getOrderHistory(
             @RequestParam(value = ProductConstants.LowerCase.PAGE, defaultValue = "1", required = true) Integer page,
@@ -533,6 +579,7 @@ public class UserController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER })
     @RequestMapping(value = "/user/orderhistory", method = RequestMethod.POST)
     public ResponseEntity<?> addOrderHistory(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();

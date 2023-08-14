@@ -17,6 +17,7 @@ import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.database.model.Animal;
 import com.happidreampets.app.database.model.Category;
 import com.happidreampets.app.database.model.Product;
+import com.happidreampets.app.utils.Utils;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -79,7 +80,7 @@ public class OtherDataControllerInterceptor extends APIController implements Han
         Animal animal = null;
 
         if (isAnimalIdPresent) {
-            if (animalIdObj == null) {
+            if (animalIdObj == null || !Utils.isStringLong(animalIdObj.toString())) {
                 failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                 failureResponse
                         .setData(new JSONObject().put(ProductConstants.LowerCase.FIELD, "animal_id").put(
@@ -106,7 +107,7 @@ public class OtherDataControllerInterceptor extends APIController implements Han
             }
         }
         if (isCategoryIdPresent || isProductIdPresent) {
-            if (categoryIdObj == null) {
+            if (categoryIdObj == null || !Utils.isStringLong(categoryIdObj.toString())) {
                 failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                 failureResponse.setData(
                         new JSONObject().put(ProductConstants.LowerCase.FIELD, "category_id").put(LowerCase.MESSAGE,
@@ -138,6 +139,18 @@ public class OtherDataControllerInterceptor extends APIController implements Han
 
         if (isProductIdPresent) {
             if (productIdObj != null) {
+                if (!Utils.isStringLong(productIdObj.toString())) {
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(new JSONObject().put(ProductConstants.LowerCase.FIELD, "product_id").put(
+                                    LowerCase.MESSAGE,
+                                    "Missing Product Id"));
+                    response.setStatus(HttpStatus.BAD_REQUEST.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write(failureResponse.throwInvalidPathVariable().getBody().toString());
+                    response.getWriter().flush();
+                    return false;
+                }
                 Long productId = Long.valueOf(productIdObj.toString());
                 Product product = getProductCRUD().getProduct(productId, category);
                 if (null == product) {

@@ -5,6 +5,7 @@ import java.util.Map;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartException;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.happidreampets.app.constants.ControllerConstants;
 import com.happidreampets.app.constants.ControllerConstants.LowerCase;
 import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.database.crud.ProductCRUD;
@@ -24,6 +26,7 @@ import com.happidreampets.app.database.model.Product;
 import com.happidreampets.app.database.model.Product.WEIGHT_UNITS;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
+import com.happidreampets.app.utils.AccessLevel;
 import com.happidreampets.app.utils.JSONUtils;
 
 @RestController
@@ -57,14 +60,23 @@ public class ProductController extends APIController {
         this.currentProduct = currentProduct;
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<String> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        FailureResponse failureResponse = new FailureResponse();
+        failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+        failureResponse.setData(new JSONObject().put(ControllerConstants.LowerCase.ERROR, "Invalid request body"));
+        return failureResponse.throwMandatoryMissing();
+    }
+
     @ExceptionHandler(MultipartException.class)
     public ResponseEntity<String> handleMultipartException(MultipartException ex) {
         FailureResponse failureResponse = new FailureResponse();
         failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
         failureResponse.setData(new JSONObject().put(LowerCase.ERROR, "Invalid request format. Please upload a file."));
-        return failureResponse.getResponse();
+        return failureResponse.throwMandatoryMissing();
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER, AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/products", method = RequestMethod.GET)
     public ResponseEntity<String> getProducts(
             @RequestParam(value = ProductConstants.LowerCase.PAGE, defaultValue = "1", required = true) Integer page,
@@ -101,6 +113,7 @@ public class ProductController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.USER, AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}", method = RequestMethod.GET)
     public ResponseEntity<String> getProduct() {
         SuccessResponse successResponse = new SuccessResponse();
@@ -127,6 +140,7 @@ public class ProductController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product", method = RequestMethod.POST)
     public ResponseEntity<String> createProduct(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -168,6 +182,7 @@ public class ProductController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}", method = RequestMethod.PUT)
     public ResponseEntity<String> updateProduct(@RequestBody Map<String, Object> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -209,6 +224,7 @@ public class ProductController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}/image", method = RequestMethod.POST)
     public ResponseEntity<String> addProductImage(
             @RequestParam(ProductConstants.LowerCase.FILE) MultipartFile productImage) {
@@ -233,6 +249,7 @@ public class ProductController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}/image/{imageId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteProductImage(@PathVariable("imageId") Long imageId) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -251,6 +268,7 @@ public class ProductController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}/image/{imageId}/thumbnail", method = RequestMethod.PUT)
     public ResponseEntity<String> updateProductImageAsThumbnail(@PathVariable("imageId") Long imageId) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -270,6 +288,7 @@ public class ProductController extends APIController {
         }
     }
 
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> updateProduct() {
         SuccessResponse successResponse = new SuccessResponse();

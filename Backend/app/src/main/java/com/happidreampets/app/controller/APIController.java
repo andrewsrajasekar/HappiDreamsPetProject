@@ -22,6 +22,7 @@ import com.happidreampets.app.constants.UserAddressConstants;
 import com.happidreampets.app.constants.AnimalConstants;
 import com.happidreampets.app.constants.CartConstants;
 import com.happidreampets.app.constants.CategoryConstants;
+import com.happidreampets.app.constants.ControllerConstants;
 import com.happidreampets.app.database.crud.AnimalCRUD;
 import com.happidreampets.app.database.crud.CartCRUD;
 import com.happidreampets.app.database.crud.CategoryCRUD;
@@ -60,6 +61,8 @@ public class APIController {
         RESOURCE_NOT_FOUND("RESOURCE_NOT_FOUND"),
         MAXIMUM_RESOURCE_CREATED("MAXIMUM_RESOURCE_CREATED"),
         UNAUTHORIZED_ACCESS("UNAUTHORIZED_ACCESS"),
+        INVALID_CREDENTIALS("INVALID_CREDENTIALS"),
+        INVALID_AUTH_TOKEN("INVALID_AUTH_TOKEN"),
         FORBIDDEN_OPERATION("FORBIDDEN_OPERATION"),
         REQUEST_TIMEOUT("REQUEST_TIMEOUT"),
         RATE_LIMIT_EXCEEDED("RATE_LIMIT_EXCEEDED"),
@@ -125,14 +128,34 @@ public class APIController {
     @Autowired
     private WeightVariantCRUD weighVariantCRUD;
 
-    private static User currentUser;
+    private User currentUser;
+
+    private Boolean isGuestUser;
+
+    private Boolean isInternalCall;
+
+    public Boolean getIsInternalCall() {
+        return isInternalCall;
+    }
+
+    public void setIsInternalCall(Boolean isInternalCall) {
+        this.isInternalCall = isInternalCall;
+    }
+
+    public Boolean getIsGuestUser() {
+        return isGuestUser;
+    }
+
+    public void setIsGuestUser(Boolean isGuestUser) {
+        this.isGuestUser = isGuestUser;
+    }
 
     public User getCurrentUser() {
         return currentUser;
     }
 
-    public void setCurrentUser(User user) {
-        currentUser = user;
+    public void setCurrentUser(User currentUser) {
+        this.currentUser = currentUser;
     }
 
     protected AnimalCRUD getAnimalCRUD() {
@@ -183,7 +206,7 @@ public class APIController {
         return weighVariantCRUD;
     }
 
-    protected class SuccessResponse {
+    public class SuccessResponse {
         private String status = ProductConstants.LowerCase.SUCCESS;
         private JSONObject data;
         private JSONObject responseData = null;
@@ -239,7 +262,7 @@ public class APIController {
         }
     }
 
-    protected class FailureResponse {
+    public class FailureResponse {
         private ERROR_CODES code = ERROR_CODES.INTERNAL_SERVER_ERROR;
         private String message = MessageCase.INTERNAL_SERVER_ERROR_OCCURED;
         private String status = LowerCase.ERROR;
@@ -306,6 +329,16 @@ public class APIController {
             return new ResponseEntity<String>(responseData.toString(), apiHeaders, apiResponseStatus);
         }
 
+        protected ResponseEntity<String> throwMandatoryMissing() {
+            JSONObject responseData = new JSONObject();
+            responseData.put(LowerCase.STATUS, status);
+            responseData.put(SnakeCase.ERROR_CODE, ERROR_CODES.MANDATORY_MISSING);
+            responseData.put(LowerCase.MESSAGE, "Mandatory Missing");
+            responseData.put(LowerCase.ERRORS, data);
+            apiHeaders.add(OtherCase.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+            return new ResponseEntity<String>(responseData.toString(), apiHeaders, apiResponseStatus);
+        }
+
         protected ResponseEntity<String> throwInvalidInput() {
             JSONObject responseData = new JSONObject();
             responseData.put(LowerCase.STATUS, status);
@@ -351,6 +384,16 @@ public class APIController {
             responseData.put(LowerCase.STATUS, status);
             responseData.put(SnakeCase.ERROR_CODE, ERROR_CODES.RESOURCE_NOT_FOUND);
             responseData.put(LowerCase.MESSAGE, "Invalid Id");
+            responseData.put(LowerCase.ERRORS, data);
+            apiHeaders.add(OtherCase.CONTENT_TYPE, MediaType.APPLICATION_JSON);
+            return new ResponseEntity<String>(responseData.toString(), apiHeaders, apiResponseStatus);
+        }
+
+        protected ResponseEntity<String> throwInvalidCredentials() {
+            JSONObject responseData = new JSONObject();
+            responseData.put(LowerCase.STATUS, status);
+            responseData.put(SnakeCase.ERROR_CODE, ERROR_CODES.INVALID_CREDENTIALS);
+            responseData.put(LowerCase.MESSAGE, "Invalid credentials");
             responseData.put(LowerCase.ERRORS, data);
             apiHeaders.add(OtherCase.CONTENT_TYPE, MediaType.APPLICATION_JSON);
             return new ResponseEntity<String>(responseData.toString(), apiHeaders, apiResponseStatus);
@@ -728,6 +771,14 @@ public class APIController {
                             .put(ProductConstants.LowerCase.FIELD, UserConstants.SnakeCase.USER_ID)
                             .put(LowerCase.MESSAGE, "User Id is Invalid"));
                     return failureResponse.throwNotFoundForIds();
+                case UserConstants.ExceptionMessageCase.INVALID_CREDENTIALS:
+                    failureResponse.setApiResponseStatus(HttpStatus.UNAUTHORIZED);
+                    failureResponse.setData(new JSONObject()
+                            .put(ControllerConstants.LowerCase.ERROR,
+                                    ControllerConstants.SnakeCase.AUTHENTICATION_ERROR)
+                            .put(ControllerConstants.LowerCase.REASON,
+                                    ControllerConstants.SnakeCase.INVALID_CREDENTIALS));
+                    return failureResponse.throwInvalidCredentials();
                 case UserAddressConstants.MessageCase.ADDRESS_COUNT_FOR_USER_IS_MAXIMUM:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse

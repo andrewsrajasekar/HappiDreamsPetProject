@@ -15,6 +15,7 @@ public class ControllerConstants {
         public static final String ERRORS = "errors";
         public static final String MESSAGE = "message";
         public static final String PARAMETER = "parameter";
+        public static final String REASON = "reason";
     }
 
     public class CamelCase {
@@ -23,6 +24,11 @@ public class ControllerConstants {
 
     public class SnakeCase {
         public static final String ERROR_CODE = "error_code";
+        public static final String AUTHENTICATION_ERROR = "authentication_error";
+        public static final String INVALID_AUTHENTICATION_TOKEN = "invalid_authentication_token";
+        public static final String EXPIRED_AUTHENTICATION_TOKEN = "expired_authentication_token";
+        public static final String INVALID_CREDENTIALS = "invalid_credentials";
+        public static final String NEW_AUTHENTICATION_TOKEN = "new_authentication_token";
     }
 
     public class CapitalizationCase {
@@ -40,10 +46,16 @@ public class ControllerConstants {
 
     public class ExceptionMessageCase {
         public static final String INTERNAL_SERVER_ERROR = "Internal Server Error";
+        public static final String INVALID_AUTHENTICATION_TOKEN = "Invalid Authentication Token";
+        public static final String UNAUTHORIZED_USER = "UnAuthorized User";
+        public static final String UNAUTHENTICATED_USER = "UnAuthenticated User";
+        public static final String EXPIRED_AUTHENTICATION_TOKEN = "Expired Authentication Token";
+        public static final String AUTHENTICATION_TOKEN_DOES_NOT_EXIST = "Authentication Token Does not Exist";
     }
 
     public class OtherCase {
         public static final String CONTENT_TYPE = "Content-Type";
+        public static final String NEW_AUTHENTICATION_TOKEN = "New-Authentication-Token";
     }
 
     public static class ExceptionThrower {

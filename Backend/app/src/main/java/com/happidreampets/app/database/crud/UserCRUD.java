@@ -4,13 +4,18 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import com.happidreampets.app.constants.CartConstants;
 import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.constants.UserAddressConstants;
+import com.happidreampets.app.constants.UserConstants;
 import com.happidreampets.app.constants.UserConstants.MessageCase;
 import com.happidreampets.app.constants.UserConstants.CapitalizationCase;
 import com.happidreampets.app.constants.UserConstants.ExceptionMessageCase;
@@ -28,16 +33,28 @@ public class UserCRUD {
     @Autowired
     private UserRepository userRepository;
 
+    private PasswordEncoder encoder = new BCryptPasswordEncoder();
+
+    public PasswordEncoder getEncoder() {
+        return encoder;
+    }
+
     private static final String EMAIL_PATTERN = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
     private static final Pattern pattern = Pattern.compile(EMAIL_PATTERN);
 
     public boolean authenticateUserBasedOnEmailAndPassword(String email, String password) {
-        User user = userRepository.findByEmailAndPassword(email, password);
+        User user = userRepository.findByEmail(email);
+        if (user != null) {
+            return getEncoder().matches(password, user.getPassword());
+        }
         return user != null;
     }
 
     public User getUserBasedOnEmailAndPassword(String email, String password) {
-        User user = userRepository.findByEmailAndPassword(email, password);
+        User user = userRepository.findByEmail(email);
+        if (user != null) {
+            return getEncoder().matches(password, user.getPassword()) ? user : null;
+        }
         return user;
     }
 
@@ -66,7 +83,8 @@ public class UserCRUD {
                             + CartConstants.LowerCase.GAP + CartConstants.MessageCase.SHOULD_BE_PRESENT);
         }
         user.setName(name);
-        user.setPassword(password);
+        String encodedPassword = getEncoder().encode(password);
+        user.setPassword(encodedPassword);
         user.setEmail(email);
         if (phone_extension != null && phone_number != null) {
             user.setPhone_extension(phone_extension);
@@ -76,7 +94,24 @@ public class UserCRUD {
             user.setDefaultAddress(defaultAddress);
         }
         user.setRole(role);
-        return userRepository.save(user);
+        try {
+            return userRepository.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            // Check if the exception is due to a unique constraint violation
+            if (ex.getCause() instanceof ConstraintViolationException) {
+                ConstraintViolationException constraintViolationException = (ConstraintViolationException) ex
+                        .getCause();
+
+                // Check if the exception is specifically due to a unique constraint violation
+                if (constraintViolationException.getConstraintName().startsWith("UNIQUE_")) {
+                    throw new Exception(UserConstants.ExceptionMessageCase.EMAIL_ALREADY_EXISTS);
+                } else {
+                    throw new Exception();
+                }
+            } else {
+                throw new Exception();
+            }
+        }
     }
 
     public User updateUserName(Long id, String name) throws Exception {
@@ -112,11 +147,12 @@ public class UserCRUD {
             user.setName(name);
         }
         if (password != null) {
-            user.setPassword(password);
+            String encodedPassword = getEncoder().encode(password);
+            user.setPassword(encodedPassword);
         }
-        if (email != null) {
-            user.setEmail(email);
-        }
+        // if (email != null) {
+        // user.setEmail(email);
+        // }
         if (phone_extension != null) {
             user.setPhone_extension(phone_extension);
 

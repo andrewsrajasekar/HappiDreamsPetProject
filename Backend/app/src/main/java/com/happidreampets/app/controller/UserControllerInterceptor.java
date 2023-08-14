@@ -15,6 +15,7 @@ import org.springframework.web.servlet.HandlerMapping;
 import com.happidreampets.app.constants.ControllerConstants.LowerCase;
 import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.database.model.User;
+import com.happidreampets.app.utils.Utils;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -67,6 +68,18 @@ public class UserControllerInterceptor extends APIController implements HandlerI
 
         if (isUserIdPresent) {
             if (userIdObj != null) {
+                if (!Utils.isStringLong(userIdObj.toString())) {
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(new JSONObject().put(ProductConstants.LowerCase.FIELD, "user_id").put(
+                                    LowerCase.MESSAGE,
+                                    "Missing User Id"));
+                    response.setStatus(HttpStatus.BAD_REQUEST.value());
+                    response.setContentType("application/json");
+                    response.getWriter().write(failureResponse.throwInvalidPathVariable().getBody().toString());
+                    response.getWriter().flush();
+                    return false;
+                }
                 Long userId = Long.valueOf(userIdObj.toString());
                 User user = getUserCRUD().getUserBasedOnId(userId);
                 if (null == user) {
