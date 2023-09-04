@@ -43,6 +43,12 @@ public class Product {
 
     }
 
+    public enum VARIANT_TYPE {
+        WEIGHT,
+        COLOR,
+        SIZE
+    }
+
     public enum PRODUCTCOLUMN {
         ID("id"),
         NAME("name"),
@@ -163,6 +169,25 @@ public class Product {
         this.price = price;
         this.category = category;
         this.thumbnailImageUrl = thumbnailImageUrl;
+    }
+
+    public Product(Long id, String name, String color, String size, WEIGHT_UNITS weightUnits, Integer weight,
+            Long stocks, Long price, Category category, ProductImage thumbnailImageUrl, Long variantSizeId,
+            Long variantColorId, Long variantWeightId, Boolean isVisible) {
+        this.id = id;
+        this.name = name;
+        this.color = color;
+        this.size = size;
+        this.weightUnits = weightUnits;
+        this.weight = weight;
+        this.stocks = stocks;
+        this.price = price;
+        this.category = category;
+        this.thumbnailImageUrl = thumbnailImageUrl;
+        this.variantColorId = variantColorId;
+        this.variantSizeId = variantSizeId;
+        this.variantWeightId = variantWeightId;
+        this.isVisible = isVisible;
     }
 
     public Product(Long id, String name, String description, String details, String richtextDetails, String color,

@@ -3,20 +3,16 @@ package com.happidreampets.app.database.crud;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang3.EnumUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import com.happidreampets.app.constants.ProductConstants;
+import com.happidreampets.app.constants.ColorVariantConstants;
 import com.happidreampets.app.constants.ColorVariantConstants.ExceptionMessageCase;
 import com.happidreampets.app.database.model.ColorVariant;
-import com.happidreampets.app.database.model.ColorVariant.COLORVARIANTCOLUMN;
 import com.happidreampets.app.database.model.Product;
 import com.happidreampets.app.database.repository.ColorVariantRepository;
 import com.happidreampets.app.database.utils.DbFilter;
@@ -36,16 +32,6 @@ public class ColorVariantCRUD {
 
     public void setDbFilter(DbFilter dbFilter) {
         this.dbFilter = dbFilter;
-    }
-
-    private COLORVARIANTCOLUMN checkAndGetColumnName() {
-        if (dbFilter != null) {
-            if (EnumUtils.isValidEnum(COLORVARIANTCOLUMN.class, dbFilter.getSortColumn().toString())) {
-                COLORVARIANTCOLUMN enumValue = COLORVARIANTCOLUMN.valueOf(dbFilter.getSortColumn().toString());
-                return enumValue;
-            }
-        }
-        return null;
     }
 
     private JSONObject getDataInRequiredFormat(Iterable<ColorVariant> data) {
@@ -81,16 +67,9 @@ public class ColorVariantCRUD {
         return pageData;
     }
 
-    public JSONObject getColorVariantDetails() {
+    public JSONObject getColorVariantDetails(Long variantId) {
         JSONObject colorVariantData = new JSONObject();
-        Sort sort = null;
-        if (getDbFilter() != null && checkAndGetColumnName() != null) {
-            sort = Sort.by(getDbFilter().getSortDirection(), checkAndGetColumnName().getColumnName());
-        }
-        Integer startIndex = getDbFilter() != null ? getDbFilter().getStartIndex() : 0;
-        Integer limit = getDbFilter() != null ? getDbFilter().getLimitIndex() : 0;
-        Pageable pageable = sort != null ? PageRequest.of(startIndex, limit, sort) : PageRequest.of(startIndex, limit);
-        Page<ColorVariant> colorVariantPage = colorVariantRepository.findAll(pageable);
+        Page<ColorVariant> colorVariantPage = colorVariantRepository.findAllByVariantId(variantId);
         Iterable<ColorVariant> colorVariantIterable = colorVariantPage.getContent();
         colorVariantData.put(ProductConstants.LowerCase.DATA,
                 getDataInRequiredFormat(colorVariantIterable).get(ProductConstants.LowerCase.DATA));
@@ -106,6 +85,19 @@ public class ColorVariantCRUD {
         ColorVariant colorVariant = new ColorVariant();
         colorVariant.setProduct(product);
         colorVariant.setVariantId(variantId);
+        colorVariant.setAddedTime(System.currentTimeMillis());
+
+        return colorVariantRepository.save(colorVariant);
+    }
+
+    public ColorVariant createSizeVariantWithoutVariantId(Product product) throws Exception {
+        List<ColorVariant> existingColorVariant = colorVariantRepository.findByProduct(product);
+        if (!existingColorVariant.isEmpty()) {
+            throw new Exception(ColorVariantConstants.ExceptionMessageCase.VARIANT_ALREADY_PRESENT);
+        }
+        ColorVariant colorVariant = new ColorVariant();
+        colorVariant.setProduct(product);
+        colorVariant.setVariantId(colorVariantRepository.findMaxVariantId() + 1);
         colorVariant.setAddedTime(System.currentTimeMillis());
 
         return colorVariantRepository.save(colorVariant);

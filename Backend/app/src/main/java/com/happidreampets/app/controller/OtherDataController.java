@@ -150,8 +150,7 @@ public class OtherDataController extends APIController {
             }
 
             TopProducts data = topProductsCRUD.createTopProducts(
-                    getProductCRUD()
-                            .getProduct(Long.valueOf(body.get(ProductConstants.SnakeCase.PRODUCT_ID).toString())),
+                    (Product) validationResult.get(ProductConstants.LowerCase.PRODUCT),
                     Integer.parseInt(body.get(SnakeCase.ORDER_NUMBER).toString()));
 
             successResponse.setApiResponseStatus(HttpStatus.CREATED);

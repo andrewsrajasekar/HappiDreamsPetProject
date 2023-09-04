@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getAnimal, getCategoryBasedOnId, getProducts } from '../services/ApiClient';
+import { deleteProduct, getAnimal, getCategoryBasedOnId, getProducts } from '../services/ApiClient';
 import UINotification from '../components/UINotification';
 import Pagination from '../components/Pagination';
 import Select from "react-select";
+import Modal from 'react-responsive-modal';
 function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from_components, animal_info_from_components, hideTitleVisibility, handleCheckBox, checkedBoxIds, preventProductNavigation, isAdminPanelUsage, onEdit}){
     let { category_id } = useParams();
     let { animal_id } = useParams();
@@ -33,6 +34,7 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
     const [userAction, setUserAction] = useState(true);
     const [applyPriceAction, setApplyPriceAction] = useState(false);
     const [applyPriceActionIndex, setApplyPriceActionIndex] = useState(0);
+    const [variationModalIsOpen, setVariationModalIsOpen] = useState(false);
     const [sortValueOptions, setSortValuesOptions] = useState([
       {id: -1, value: "default", label: "Select an option"},
       {id: 1, value: "name_asc", label: "Name, ASC"},
@@ -106,7 +108,7 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
 
   const fetchProductsByConditions = async (sortCol, sortBy, priceMin, priceMax, hardRefresh) => {
     setApiOngoing(true);
-    const productData = await getProducts(animalInfo.id, categoryInfo.id, apiPage, apiPerPageLimit,
+    const productData = await getProducts(animalInfo.id, categoryInfo.id, hardRefresh ? 1 : apiPage, apiPerPageLimit,
       sortCol, sortBy, priceMin, priceMax);
     if (productData.isSuccess) {
       let oldData = products.slice();
@@ -117,6 +119,7 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
       setProducts(newData);
       if(hardRefresh){
         setCurrentPageNumber(1);
+        setApiPage(1);
       }
       let infoData = productData.successResponse.data.info;
       setHasMoreElements(infoData.more_records);
@@ -128,6 +131,11 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
       navigate("/home");
     }
   }
+
+  useEffect(() => {
+    setTotalPages(Math.floor(totalProducts / perPageProducts) + (totalProducts % perPageProducts == 0 ? 0 : 1));
+    setPaginationIndex(paginationIndex + 1);
+  }, [totalProducts])
 
   useEffect(() => {
     if (categoryInfo && animalInfo) {
@@ -180,8 +188,8 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
 
   useEffect(() => {
     if (manualRefresh && manualPageNumber > 0) {
-      let nextPageData = isAnimalProductTypeCategory ? categories.slice((manualPageNumber - 1) * perPageCategories, perPageCategories * manualPageNumber) : animals.slice((manualPageNumber - 1) * perPageCategories, perPageCategories * manualPageNumber);
-      if ((nextPageData.length === 0 || (nextPageData.length % perPageCategories !== 0)) && hasMoreElements) {
+      let nextPageData = products.slice((manualPageNumber - 1) * perPageProducts, perPageProducts * manualPageNumber);
+      if ((nextPageData.length === 0 || (nextPageData.length % perPageProducts !== 0)) && hasMoreElements) {
         setApiPage(apiPage + 1);
       } else {
         renderElements(products.slice((currentPageNumber - 1) * perPageProducts, perPageProducts * currentPageNumber));
@@ -288,10 +296,20 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
         navigate("/" + animalInfo.id + "/" + categoryInfo.id + "/" + product.id)
       }
 
-      const handleDelete = (index) => {
+      const handleDelete = async (index, product) => {
         let data = [...products];
-        data.splice(index, 1);
-        setProducts(data);
+        index = ((currentPageNumber - 1) * perPageProducts) + index;
+        const deleteResponse = await deleteProduct(animal_info_from_components.id, category_info_from_components.id, product.id);
+        if(deleteResponse.isSuccess){
+          data.splice(index, 1);
+          setProducts(data);
+          setTotalProducts(totalProducts - 1);
+          setManualPageNumber(currentPageNumber);
+          setManualRefresh(true);
+          UINotification({ message: "Product " + product.name + " is deleted", type: "Success" });
+        }else{
+          UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+        }
       }
 
       const handleEdit = (productInfo) => {
@@ -306,9 +324,10 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
         productInfo.isExternalUpload = true;
         productInfo.images = [];
         productInfo.variationPrimaryId = productInfo.id;
-        if(isAdminPanel){
-          onEdit(productInfo);
-        }
+        // if(isAdminPanel){
+        //   onEdit(productInfo);
+        // }
+        setVariationModalIsOpen(true);
       }
 
       const handleSortChange = (value) => {
@@ -373,7 +392,7 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
                   <span className="tracking-wider text-gray-900">  {element.price} </span>
                   <span className="ml-2 cursor-pointer mr-2 text-green-400 hover:text-green-500" onClick={() => {handleVariation(element)}}>Add a Variation</span>
                   <span className="cursor-pointer mr-2 text-indigo-500 hover:text-indigo-900" onClick={() => {handleEdit(element)}}>Edit</span>
-                  <span className="cursor-pointer mr-2 text-red-500 hover:text-red-900" onClick={()=>{handleDelete(index)}}>Delete</span>
+                  <span className="cursor-pointer mr-2 text-red-500 hover:text-red-900" onClick={()=>{handleDelete(index, element)}}>Delete</span>
                   </div>
                 }
                   
@@ -545,6 +564,14 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
           <Pagination key={paginationIndex} totalPages={totalPages} onClickOfPageNumber={(pageNumber, setFromItem, setToItem, setTotalPage, setTotalData) => onPageNumberChange(pageNumber, setFromItem, setToItem, setTotalPage, setTotalData)} initialPerPageResult={currentProducts.length >= perPageProducts ? perPageProducts : currentProducts.length} totalResult={totalProducts} manualPageNumber={manualPageNumber > 0 ? manualPageNumber : undefined} />
         </div>
         </>}
+        {variationModalIsOpen && (
+        <Modal closeOnOverlayClick={false} open={variationModalIsOpen} onClose={() => setVariationModalIsOpen(false)} center blockScroll={true} closeIconId={"variationModalClose"}  styles={{modal: {width: '50%'}}}>
+      <div onClick={(event) => event.stopPropagation()}>
+        <h1 className="text-xl font-bold mb-6 -mt-2">Variation Details</h1>
+          <div>Dummy</div>
+      </div>
+      </Modal>
+      )}
     </div>
   </section>
   );

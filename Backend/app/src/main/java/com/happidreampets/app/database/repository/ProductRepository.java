@@ -33,20 +33,30 @@ public interface ProductRepository extends CrudRepository<Product, Long> {
                      "FROM Product p " +
                      "WHERE p.category = :category " +
                      "AND p.toBeDeleted = false " +
-                     "AND p.isVisible = true")
-       Page<Product> findAllProductsForUIByCategory(Pageable pageable, @Param("category") Category category);
+                     "AND (:skipVisibility = true OR p.isVisible = true)")
+       Page<Product> findAllProductsForUIByCategory(Pageable pageable, @Param("category") Category category,
+                     @Param("skipVisibility") boolean skipVisibility);
 
        @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name, CASE WHEN p.color <> null THEN p.color ELSE null END, CASE WHEN p.size <> null THEN p.size ELSE null END, CASE WHEN p.weightUnits <> com.happidreampets.app.database.model.Product$WEIGHT_UNITS.NONE THEN p.weightUnits ELSE null END, CASE WHEN p.weight > 0 THEN p.weight ELSE null END, p.stocks, p.price, p.category, p.thumbnailImageUrl) "
                      +
                      "FROM Product p " +
                      "WHERE p.category = :category " +
                      "AND p.toBeDeleted = false " +
-                     "AND p.isVisible = true " +
+                     "AND (:skipVisibility = true OR p.isVisible = true)")
+       List<Product> findAllProductsByCategory(@Param("category") Category category,
+                     @Param("skipVisibility") boolean skipVisibility);
+
+       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name, CASE WHEN p.color <> null THEN p.color ELSE null END, CASE WHEN p.size <> null THEN p.size ELSE null END, CASE WHEN p.weightUnits <> com.happidreampets.app.database.model.Product$WEIGHT_UNITS.NONE THEN p.weightUnits ELSE null END, CASE WHEN p.weight > 0 THEN p.weight ELSE null END, p.stocks, p.price, p.category, p.thumbnailImageUrl) "
+                     +
+                     "FROM Product p " +
+                     "WHERE p.category = :category " +
+                     "AND p.toBeDeleted = false " +
+                     "AND (:skipVisibility = true OR p.isVisible = true) " +
                      "AND p.price >= :minPrice " +
                      "AND p.price <= :maxPrice")
        Page<Product> findAllProductsForUIByCategoryByMinAndMaxPrice(Pageable pageable,
                      @Param("category") Category category, @Param("minPrice") Long minPrice,
-                     @Param("maxPrice") Long maxPrice);
+                     @Param("maxPrice") Long maxPrice, @Param("skipVisibility") boolean skipVisibility);
 
        @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name, p.description, p.details, p.richtextDetails, CASE WHEN p.color <> null THEN p.color ELSE null END, CASE WHEN p.size <> null THEN p.size ELSE null END, CASE WHEN p.weightUnits <> com.happidreampets.app.database.model.Product$WEIGHT_UNITS.NONE THEN p.weightUnits ELSE null END, CASE WHEN p.weight > 0 THEN p.weight ELSE null END, p.stocks, p.price, p.category, p.thumbnailImageUrl, p.images ) "
                      +
@@ -54,7 +64,16 @@ public interface ProductRepository extends CrudRepository<Product, Long> {
                      "WHERE p.id = :id " +
                      "AND p.category = :category " +
                      "AND p.toBeDeleted = false " +
-                     "AND p.isVisible = true")
-       Product findProductForUIByCategory(@Param("id") Long id, @Param("category") Category category);
+                     "AND (:skipVisibility = true OR p.isVisible = true)")
+       Product findProductForUIByCategory(@Param("id") Long id, @Param("category") Category category,
+                     @Param("skipVisibility") boolean skipVisibility);
+
+       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name, p.description, p.details, p.richtextDetails, CASE WHEN p.color <> null THEN p.color ELSE null END, CASE WHEN p.size <> null THEN p.size ELSE null END, CASE WHEN p.weightUnits <> com.happidreampets.app.database.model.Product$WEIGHT_UNITS.NONE THEN p.weightUnits ELSE null END, CASE WHEN p.weight > 0 THEN p.weight ELSE null END, p.stocks, p.price, p.category, p.thumbnailImageUrl, p.variantSizeId, p.variantColorId, p.variantWeightId. p.isVisible ) "
+                     +
+                     "FROM Product p " +
+                     "WHERE p.id = :id " +
+                     "AND p.category = :category " +
+                     "AND p.toBeDeleted = false ")
+       Product findProductVariantForUIByCategory(@Param("id") Long id, @Param("category") Category category);
 
 }

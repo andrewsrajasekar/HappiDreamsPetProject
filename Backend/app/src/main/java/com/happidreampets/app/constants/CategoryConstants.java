@@ -14,11 +14,11 @@ public class CategoryConstants {
     }
 
     public class CamelCase {
-        public static final String CATEGORY_ID = "category_id";
+
     }
 
     public class SnakeCase {
-
+        public static final String CATEGORY_ID = "category_id";
     }
 
     public class CapitalizationCase {

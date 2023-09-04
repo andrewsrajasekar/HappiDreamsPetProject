@@ -27,6 +27,7 @@ function ProductList({selectedCategory, selectedAnimal}){
     const [isFileUpload, setIsFileUpload] = useState(true);
     const [variationPrimaryId, setVariationPrimaryId] = useState(undefined);
     const [createFormKey, setKeyFormKey] = useState(1);
+    const [editFormKey, setEditFormKey] = useState(1);
 
     
     const onEdit = async (data) => {
@@ -72,9 +73,9 @@ function ProductList({selectedCategory, selectedAnimal}){
         setIsFileUpload(!isExternalUrl);
         if(isImagesPresent){
             if(isExternalUrl){
-                setImageUrls(productInfo.images.map(item => item.imageUrl) || []);
+                setImageUrls(productInfo.images);
             }else{
-                setImages(productInfo.images.map(item => item.imageUrl) || []);
+                setImages(productInfo.images);
             }
         }else{
             setImages([]);
@@ -88,13 +89,14 @@ function ProductList({selectedCategory, selectedAnimal}){
 
     const backToList = () => {
         setEditComponent(false);
+        setEditFormKey(editFormKey + 1);
     }
 
 
       return(
         <>
             {!editComponent ? 
-             <Products isAdminPanelUsage={true} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_info_from_components={selectedCategory} animal_info_from_components={selectedAnimal} onEdit={onEdit} />
+             <Products key={editFormKey} isAdminPanelUsage={true} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_info_from_components={selectedCategory} animal_info_from_components={selectedAnimal} onEdit={onEdit} />
         :
         <>
         <div className="flex flex-row">
@@ -102,7 +104,7 @@ function ProductList({selectedCategory, selectedAnimal}){
         <ArrowLeftIcon className="w-16 h-16 cursor-pointer" onClick={backToList} />
         </div>
         <div className="mx-80">
-        <ProductCreateForm key={createFormKey} productId_Edit={productId} productName_Edit={productName} productDescription_Edit={productDescription} productDetailsNonEditor_Edit={isProductDetailsEditorText ? undefined : productDetailsNonEditor} productDetails_Edit={isProductDetailsEditorText ? productDetails : undefined} isProductColorEnabled_Edit={isProductColorEnabled} productColor_Edit={productColor} isProductSizeEnabled_Edit={isProductSizeEnabled} productSize_Edit={productSize} isProductWeightEnabled_Edit={isProductWeightEnabled} productWeightUnits_Edit={productWeightUnits} productWeight_Edit={productWeight} productStocksAvailable_Edit={productStocksAvailable} productPrice_Edit={productPrice} images_Edit={images} imageUrls_Edit={imageUrls} isFileUpload_Edit={isFileUpload} variationPrimaryId={variationPrimaryId} editMode={true} />
+        <ProductCreateForm selectedAnimal={selectedAnimal} selectedCategory={selectedCategory} key={createFormKey} productId_Edit={productId} productName_Edit={productName} productDescription_Edit={productDescription} productDetailsNonEditor_Edit={isProductDetailsEditorText ? undefined : productDetailsNonEditor} productDetails_Edit={isProductDetailsEditorText ? productDetails : undefined} isProductColorEnabled_Edit={isProductColorEnabled} productColor_Edit={productColor} isProductSizeEnabled_Edit={isProductSizeEnabled} productSize_Edit={productSize} isProductWeightEnabled_Edit={isProductWeightEnabled} productWeightUnits_Edit={productWeightUnits} productWeight_Edit={productWeight} productStocksAvailable_Edit={productStocksAvailable} productPrice_Edit={productPrice} images_Edit={images} imageUrls_Edit={imageUrls} isFileUpload_Edit={isFileUpload} variationPrimaryId={variationPrimaryId} onEditDone={backToList} editMode={true} />
         </div>
         </div>
         </>

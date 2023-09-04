@@ -395,9 +395,9 @@ public class TopCategoriesCRUD {
         String missingField = ProductConstants.LowerCase.EMPTY_QUOTES;
         String message = ProductConstants.MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
         String code = ERROR_CODES.MANDATORY_MISSING.name();
-        if (!body.has(CategoryConstants.CamelCase.CATEGORY_ID)) {
-            missingField = CategoryConstants.CamelCase.CATEGORY_ID;
-            message = message.replace(ProductConstants.LoggerCase.ARG0, CategoryConstants.CamelCase.CATEGORY_ID);
+        if (!body.has(CategoryConstants.SnakeCase.CATEGORY_ID)) {
+            missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+            message = message.replace(ProductConstants.LoggerCase.ARG0, CategoryConstants.SnakeCase.CATEGORY_ID);
         } else if (!body.has(ProductConstants.LowerCase.PRODUCTS)) {
             missingField = ProductConstants.LowerCase.PRODUCTS;
             message = message.replace(ProductConstants.LoggerCase.ARG0, ProductConstants.LowerCase.PRODUCTS);

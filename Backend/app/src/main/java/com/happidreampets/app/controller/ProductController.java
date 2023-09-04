@@ -23,10 +23,12 @@ import org.springframework.web.multipart.MultipartFile;
 import com.happidreampets.app.constants.ControllerConstants;
 import com.happidreampets.app.constants.ControllerConstants.LowerCase;
 import com.happidreampets.app.constants.ProductConstants;
+import com.happidreampets.app.constants.ProductConstants.SnakeCase;
 import com.happidreampets.app.database.crud.ProductCRUD;
 import com.happidreampets.app.database.model.Animal;
 import com.happidreampets.app.database.model.Category;
 import com.happidreampets.app.database.model.Product;
+import com.happidreampets.app.database.model.Product.VARIANT_TYPE;
 import com.happidreampets.app.database.model.Product.WEIGHT_UNITS;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
@@ -89,7 +91,8 @@ public class ProductController extends APIController {
             @RequestParam(value = ProductConstants.SnakeCase.SORT_ORDER, required = false) String sort_order,
             @RequestParam(value = ProductConstants.SnakeCase.SORT_BY, required = false) String sort_by,
             @RequestParam(value = ProductConstants.LowerCase.PAGE, defaultValue = "1", required = true) Integer page,
-            @RequestParam(value = ProductConstants.SnakeCase.PER_PAGE, defaultValue = "6", required = true) Integer per_page) {
+            @RequestParam(value = ProductConstants.SnakeCase.PER_PAGE, defaultValue = "6", required = true) Integer per_page,
+            @RequestParam(value = ProductConstants.SnakeCase.SKIP_VISIBILITY, defaultValue = "false", required = false) Boolean skip_visibility) {
         SuccessResponse successResponse = new SuccessResponse();
         try {
             ParameterCheck paramCheck = new ParameterCheck();
@@ -106,6 +109,11 @@ public class ProductController extends APIController {
             if (per_page <= 0) {
                 throw new Exception(ProductConstants.ExceptionMessageCase.PER_PAGE_GREATER_THAN_ZERO);
             }
+            if (skip_visibility) {
+                if (!getUserCRUD().isUserAdmin(getCurrentUser())) {
+                    skip_visibility = false;
+                }
+            }
 
             DbFilter dbFilter = new DbFilter();
             dbFilter.setFormat(DATAFORMAT.JSON);
@@ -117,7 +125,37 @@ public class ProductController extends APIController {
             }
             ProductCRUD productCRUD = getProductCRUD();
             productCRUD.setDbFilter(dbFilter);
-            JSONObject data = productCRUD.getProductDetailsForUI(getCurrentCategory(), minPrice, maxPrice);
+            JSONObject data = productCRUD.getProductDetailsForUI(getCurrentCategory(), minPrice, maxPrice,
+                    skip_visibility);
+            successResponse = new SuccessResponse();
+            if (data.has(ProductConstants.LowerCase.DATA)
+                    && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
+                successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
+            } else {
+                successResponse.setApiResponseStatus(HttpStatus.OK);
+            }
+            successResponse.setResponseData(data);
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
+            productControllerExceptions.setException(ex);
+            return productControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/products/all", method = RequestMethod.GET)
+    public ResponseEntity<String> getAllProducts(
+            @RequestParam(value = ProductConstants.SnakeCase.SKIP_VISIBILITY, defaultValue = "false", required = false) Boolean skip_visibility) {
+        SuccessResponse successResponse = new SuccessResponse();
+        try {
+
+            DbFilter dbFilter = new DbFilter();
+            dbFilter.setFormat(DATAFORMAT.JSON);
+            ProductCRUD productCRUD = getProductCRUD();
+            productCRUD.setDbFilter(dbFilter);
+            JSONObject data = productCRUD.getAllProductDetailsForVariation(getCurrentCategory(),
+                    skip_visibility);
             successResponse = new SuccessResponse();
             if (data.has(ProductConstants.LowerCase.DATA)
                     && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
@@ -136,16 +174,24 @@ public class ProductController extends APIController {
 
     @AccessLevel({ AccessLevel.AccessEnum.USER, AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}", method = RequestMethod.GET)
-    public ResponseEntity<String> getProduct() {
+    public ResponseEntity<String> getProduct(
+            @RequestParam(value = ProductConstants.SnakeCase.SKIP_VISIBILITY, defaultValue = "false", required = false) Boolean skip_visibility) {
         SuccessResponse successResponse = new SuccessResponse();
         try {
+            if (skip_visibility) {
+                if (!getUserCRUD().isUserAdmin(getCurrentUser())) {
+                    skip_visibility = false;
+                }
+            }
+
             DbFilter dbFilter = new DbFilter();
             dbFilter.setFormat(DATAFORMAT.JSON);
             dbFilter.setStartIndex(0);
             dbFilter.setLimitIndex(0);
             ProductCRUD productCRUD = getProductCRUD();
             productCRUD.setDbFilter(dbFilter);
-            JSONObject data = productCRUD.getProductForUI(currentProduct.getId(), getCurrentCategory());
+            JSONObject data = productCRUD.getProductForUI(currentProduct.getId(), getCurrentCategory(),
+                    skip_visibility);
             successResponse = new SuccessResponse();
             if (!data.has(ProductConstants.LowerCase.DATA)) {
                 throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_PRODUCT_ID);
@@ -289,6 +335,40 @@ public class ProductController extends APIController {
     }
 
     @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/product/{productId}/images", method = RequestMethod.DELETE)
+    public ResponseEntity<String> deleteProductImages(@RequestBody HashMap<String, Object> bodyData) {
+        SuccessResponse successResponse = new SuccessResponse();
+        JSONObject errorData = new JSONObject();
+        try {
+            ProductCRUD productCRUD = getProductCRUD();
+            JSONObject body = JSONUtils.convertMapToJSONObject(bodyData);
+
+            JSONObject validationResult = productCRUD.checkBodyOfDeleteImages(body);
+            if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
+                errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
+                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_IMAGE_IDS_FOR_DELETE);
+            }
+            List<Long> imageIds = JSONUtils.convertJSONToListLong(body, SnakeCase.IMAGE_IDS);
+            productCRUD.checkImageIds(currentProduct, imageIds);
+            for (Long imageId : imageIds) {
+                productCRUD.deleteImageFromProduct(currentProduct, imageId);
+            }
+
+            successResponse = new SuccessResponse();
+            successResponse.setApiResponseStatus(HttpStatus.OK);
+            successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, currentProduct.getId()));
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
+            productControllerExceptions.setException(ex);
+            if (!errorData.isEmpty()) {
+                productControllerExceptions.setData(errorData);
+            }
+            return productControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}/image/{imageId}", method = RequestMethod.DELETE)
     public ResponseEntity<String> deleteProductImage(@PathVariable("imageId") Long imageId) {
         SuccessResponse successResponse = new SuccessResponse();
@@ -329,7 +409,7 @@ public class ProductController extends APIController {
 
     @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/product/{productId}", method = RequestMethod.DELETE)
-    public ResponseEntity<String> updateProduct() {
+    public ResponseEntity<String> deleteProduct() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
             ProductCRUD productCRUD = getProductCRUD();
@@ -345,6 +425,85 @@ public class ProductController extends APIController {
         } catch (Exception ex) {
             ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
             productControllerExceptions.setException(ex);
+            return productControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.USER, AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/product/{productId}/variation", method = RequestMethod.GET)
+    public ResponseEntity<String> getProductVariations() {
+        SuccessResponse successResponse = new SuccessResponse();
+        try {
+            ProductCRUD productCRUD = getProductCRUD();
+            JSONObject data = productCRUD.getProductVariantDetailsForUI(currentProduct.getId(), getCurrentCategory());
+            successResponse = new SuccessResponse();
+            successResponse.setApiResponseStatus(HttpStatus.OK);
+            successResponse.setResponseData(data);
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
+            productControllerExceptions.setException(ex);
+            return productControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/product/{productId}/variation", method = RequestMethod.POST)
+    public ResponseEntity<String> createProductVariation(@RequestBody Map<String, Object> bodyData) {
+        SuccessResponse successResponse = new SuccessResponse();
+        JSONObject errorData = new JSONObject();
+        try {
+            JSONObject body = JSONUtils.convertMapToJSONObject(bodyData);
+            ProductCRUD productCRUD = getProductCRUD();
+            JSONObject validationResult = productCRUD.checkBodyOfCreateVariation(body);
+            if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
+                errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
+                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_BODY_FOR_CREATE_VARIATION);
+            }
+            VARIANT_TYPE variantType = VARIANT_TYPE
+                    .valueOf(validationResult.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
+
+            productCRUD.createProductVariant(currentProduct,
+                    (Product) validationResult.get(ProductConstants.LowerCase.PRODUCT), variantType);
+            successResponse = new SuccessResponse();
+            successResponse.setApiResponseStatus(HttpStatus.CREATED);
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
+            productControllerExceptions.setException(ex);
+            if (!errorData.isEmpty()) {
+                productControllerExceptions.setData(errorData);
+            }
+            return productControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/product/{productId}/variation", method = RequestMethod.DELETE)
+    public ResponseEntity<String> deleteProductVariation(@RequestBody Map<String, Object> bodyData) {
+        SuccessResponse successResponse = new SuccessResponse();
+        JSONObject errorData = new JSONObject();
+        try {
+            JSONObject body = JSONUtils.convertMapToJSONObject(bodyData);
+            ProductCRUD productCRUD = getProductCRUD();
+            JSONObject validationResult = productCRUD.checkBodyOfCreateVariation(body);
+            if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
+                errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
+                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_BODY_FOR_DELETE_VARIATION);
+            }
+            VARIANT_TYPE variantType = VARIANT_TYPE
+                    .valueOf(validationResult.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
+
+            productCRUD.deleteProductVariant(currentProduct, variantType);
+            successResponse = new SuccessResponse();
+            successResponse.setApiResponseStatus(HttpStatus.OK);
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
+            productControllerExceptions.setException(ex);
+            if (!errorData.isEmpty()) {
+                productControllerExceptions.setData(errorData);
+            }
             return productControllerExceptions.returnResponseBasedOnException();
         }
     }

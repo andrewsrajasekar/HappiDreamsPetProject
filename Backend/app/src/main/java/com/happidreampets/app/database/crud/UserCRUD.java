@@ -575,4 +575,8 @@ public class UserCRUD {
         }
         return response;
     }
+
+    public Boolean isUserAdmin(User user) {
+        return user != null ? user.getRole().equals(USER_ROLE.ADMIN) : false;
+    }
 }

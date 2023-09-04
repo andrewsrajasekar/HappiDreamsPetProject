@@ -49,6 +49,7 @@ public class ProductConstants {
         public static final String MORE_RECORDS = "more_records";
         public static final String PRODUCT_ID = "product_id";
         public static final String IMAGE_ID = "image_id";
+        public static final String IMAGE_IDS = "image_ids";
         public static final String TOTAL_RECORDS = "total_records";
         public static final String IMAGE_TYPE = "image_type";
         public static final String RICH_TEXT_DETAILS = "rich_text_details";
@@ -56,6 +57,8 @@ public class ProductConstants {
         public static final String PRICE_MIN = "price_min";
         public static final String PRICE_MAX = "price_max";
         public static final String SORT_BY = "sort_by";
+        public static final String SKIP_VISIBILITY = "skip_visibility";
+        public static final String VARIANT_TYPE = "variant_type";
     }
 
     public class CapitalizationCase {
@@ -92,6 +95,7 @@ public class ProductConstants {
         public static final String MAXIMUM_IMAGES_FOR_PRODUCT_WILL_BE_REACHED_FOR_IMAGEURL = "Maximum Images for Product will be Reached for ImageUrl";
         public static final String NO_IMAGE_ASSOCIATED_WITH_PRODUCT = "No Image Associated with Product";
         public static final String IMAGE_ID_NOT_FOUND_FOR_THE_PRODUCT = "Image Id not Found for the Product";
+        public static final String IMAGE_ID_IN_GIVEN_LIST_NOT_FOUND_FOR_THE_PRODUCT = "Image Id in given list not Found for the Product";
         public static final String PAGE_GREATER_THAN_ZERO = "Page Value Must Be Greater than 0";
         public static final String INVALID_SORT_ORDER_VALUE = "Invalid Sort Order Value";
         public static final String INVALID_SORT_BY_VALUE = "Invalid Sort By Value";
@@ -103,6 +107,9 @@ public class ProductConstants {
         public static final String INVALID_IMAGE_FORMAT = "Invalid Image Format";
         public static final String INVALID_PRICE_MIN_VALUE = "Invalid Price Min Value";
         public static final String INVALID_PRICE_MAX_VALUE = "Invalid Price Max Value";
+        public static final String INVALID_IMAGE_IDS_FOR_DELETE = "Invalid Image Ids for Delete";
+        public static final String INVALID_BODY_FOR_CREATE_VARIATION = "Invalid Body for Create Variation";
+        public static final String INVALID_BODY_FOR_DELETE_VARIATION = "Invalid Body for Delete Variation";
     }
 
     public class OtherCase {

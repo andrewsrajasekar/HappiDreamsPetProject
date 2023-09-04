@@ -20,9 +20,13 @@ export default function Pagination({totalPages, onClickOfPageNumber, initialPerP
 
     useEffect(() => {
       if(manualPageNumber !== undefined && manualPageNumber > 0){
-        onPageNumberChange(manualPageNumber);
+        if(manualPageNumber > totalPages){
+          onPageNumberChange(totalPages);
+        }else{
+          onPageNumberChange(manualPageNumber);
+        }       
       }
-    }, [manualPageNumber])
+    }, [manualPageNumber]);
 
     let paginationNumberLimit = 6;
 

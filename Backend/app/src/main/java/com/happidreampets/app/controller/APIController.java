@@ -20,7 +20,9 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.happidreampets.app.constants.ProductConstants;
+import com.happidreampets.app.constants.SizeVariantConstants;
 import com.happidreampets.app.constants.UserConstants;
+import com.happidreampets.app.constants.WeightVariantConstants;
 import com.happidreampets.app.constants.TopCategoriesConstants;
 import com.happidreampets.app.constants.TopCategoriesConstants.CapitalizationCase;
 import com.happidreampets.app.constants.TopProductsConstants;
@@ -28,6 +30,7 @@ import com.happidreampets.app.constants.UserAddressConstants;
 import com.happidreampets.app.constants.AnimalConstants;
 import com.happidreampets.app.constants.CartConstants;
 import com.happidreampets.app.constants.CategoryConstants;
+import com.happidreampets.app.constants.ColorVariantConstants;
 import com.happidreampets.app.constants.ControllerConstants;
 import com.happidreampets.app.database.crud.AnimalCRUD;
 import com.happidreampets.app.database.crud.CartCRUD;
@@ -535,6 +538,15 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "Maximum Number of Images that can be created for a Product Reached"));
                     return failureResponse.throwMaximumResourceCreated();
+                case ProductConstants.ExceptionMessageCase.IMAGE_ID_IN_GIVEN_LIST_NOT_FOUND_FOR_THE_PRODUCT:
+                    failureResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
+                    failureResponse.setCode(ERROR_CODES.RESOURCE_NOT_FOUND);
+                    failureResponse.setData(new JSONObject()
+                            .put(ProductConstants.LowerCase.FIELD, ProductConstants.SnakeCase.IMAGE_ID)
+                            .put(LowerCase.MESSAGE,
+                                    "Invalid Image Id is found in the list the given Product"));
+                    failureResponse.setMessage("Invalid Image Id");
+                    return failureResponse.getResponse();
                 case ProductConstants.ExceptionMessageCase.NO_IMAGE_ASSOCIATED_WITH_PRODUCT:
                 case ProductConstants.ExceptionMessageCase.IMAGE_ID_NOT_FOUND_FOR_THE_PRODUCT:
                     failureResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
@@ -555,6 +567,82 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "Invalid Product Id"));
                     return failureResponse.throwInvalidPathVariable();
+                case ProductConstants.ExceptionMessageCase.INVALID_IMAGE_IDS_FOR_DELETE:
+                case ProductConstants.ExceptionMessageCase.INVALID_BODY_FOR_CREATE_VARIATION:
+                case ProductConstants.ExceptionMessageCase.INVALID_BODY_FOR_DELETE_VARIATION:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse.setData(getData());
+                    return failureResponse.throwInvalidBodyInput();
+                case WeightVariantConstants.ExceptionMessageCase.ALREADY_WEIGHT_VARIANT_ADDED:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Weight Variant Relation Already Done"));
+                    return failureResponse.throwInvalidBodyInput();
+                case WeightVariantConstants.ExceptionMessageCase.WEIGHT_VARIANT_ADDED_TO_OTHER_PRODUCT:
+                    failureResponse.setApiResponseStatus(HttpStatus.FORBIDDEN);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Weight Variant Relation Already Exists With other product"));
+                    return failureResponse.throwInvalidBodyInput();
+                case SizeVariantConstants.ExceptionMessageCase.ALREADY_SIZE_VARIANT_ADDED:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Size Variant Relation Already Done"));
+                    return failureResponse.throwInvalidBodyInput();
+                case SizeVariantConstants.ExceptionMessageCase.SIZE_VARIANT_ADDED_TO_OTHER_PRODUCT:
+                    failureResponse.setApiResponseStatus(HttpStatus.FORBIDDEN);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Size Variant Relation Already Exists With other product"));
+                    return failureResponse.throwInvalidBodyInput();
+                case ColorVariantConstants.ExceptionMessageCase.ALREADY_COLOR_VARIANT_ADDED:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Color Variant Relation Already Done"));
+                    return failureResponse.throwInvalidBodyInput();
+                case ColorVariantConstants.ExceptionMessageCase.COLOR_VARIANT_ADDED_TO_OTHER_PRODUCT:
+                    failureResponse.setApiResponseStatus(HttpStatus.FORBIDDEN);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Color Variant Relation Already Exists With other product"));
+                    return failureResponse.throwInvalidBodyInput();
+                case WeightVariantConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.VARIANT_TYPE)
+                                            .put(LowerCase.MESSAGE,
+                                                    "No Given Variant has been associated with other product"));
+                    return failureResponse.throwInvalidBodyInput();
                 case ExceptionMessageCase.INTERNAL_SERVER_ERROR:
                     return failureResponse.getResponse();
                 default:
@@ -649,7 +737,7 @@ public class APIController {
                             .setData(
                                     new JSONObject()
                                             .put(ProductConstants.LowerCase.FIELD,
-                                                    CategoryConstants.CamelCase.CATEGORY_ID)
+                                                    CategoryConstants.SnakeCase.CATEGORY_ID)
                                             .put(LowerCase.MESSAGE,
                                                     "Category not Found in Top Category"));
                     return failureResponse.throwInvalidPathVariable();
@@ -704,7 +792,7 @@ public class APIController {
                             .setData(
                                     new JSONObject()
                                             .put(ProductConstants.LowerCase.FIELD,
-                                                    CategoryConstants.CamelCase.CATEGORY_ID)
+                                                    CategoryConstants.SnakeCase.CATEGORY_ID)
                                             .put(LowerCase.MESSAGE,
                                                     "Category not found in Top Categories"));
                     return failureResponse.throwInvalidPathVariable();
@@ -762,7 +850,7 @@ public class APIController {
                 case CategoryConstants.ExceptionMessageCase.INVALID_CATEGORY_ID:
                     failureResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
                     failureResponse.setData(new JSONObject()
-                            .put(ProductConstants.LowerCase.FIELD, CategoryConstants.CamelCase.CATEGORY_ID)
+                            .put(ProductConstants.LowerCase.FIELD, CategoryConstants.SnakeCase.CATEGORY_ID)
                             .put(LowerCase.MESSAGE, "Category Id is Invalid"));
                     return failureResponse.throwNotFoundForIds();
                 case CategoryConstants.ExceptionMessageCase.MISSING_CATEGORY_FIELD_FOR_CREATE:

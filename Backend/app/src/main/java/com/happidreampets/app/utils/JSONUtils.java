@@ -1,5 +1,6 @@
 package com.happidreampets.app.utils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -57,5 +58,16 @@ public class JSONUtils {
         ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(data);
         return new JSONObject(json);
+    }
+
+    public static List<Long> convertJSONToListLong(JSONObject data, String key) throws Exception {
+        List<Long> returnData = new ArrayList<>();
+        if (data.has(key)) {
+            JSONArray values = data.getJSONArray(key);
+            for (Object item : values) {
+                returnData.add(Long.valueOf("" + item));
+            }
+        }
+        return returnData;
     }
 }

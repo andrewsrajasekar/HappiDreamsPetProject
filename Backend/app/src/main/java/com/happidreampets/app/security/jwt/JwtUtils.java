@@ -51,7 +51,7 @@ public class JwtUtils {
         this.isInternalCall = isInternalCall;
     }
 
-    public JSONObject getJwtToken(User user, Boolean createIfNotFound) throws Exception {
+    public JSONObject getJwtToken(User user, Boolean createIfNotFound, Boolean regenerateIfExpired) throws Exception {
         InternalAuthenticationToken internalAuthenticationToken = internalAuthenticationTokenCRUD
                 .getInternalAuthenticationTokenOfUser(user);
         if (internalAuthenticationToken == null) {
@@ -60,6 +60,14 @@ public class JwtUtils {
                         .insertInternalAuthenticationToken(user, this.generateJwtToken(user));
             } else {
                 return null;
+            }
+        } else {
+            if (regenerateIfExpired && isTokenExpired(internalAuthenticationToken)) {
+                Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+                calendar.add(Calendar.MILLISECOND, jwtExpirationMs);
+                internalAuthenticationToken = internalAuthenticationTokenCRUD.updateInternalAuthenticationToken(
+                        internalAuthenticationToken,
+                        calendar.getTime().getTime());
             }
         }
         JSONObject data = new JSONObject();
@@ -108,8 +116,14 @@ public class JwtUtils {
     }
 
     public User getUserFromToken(String token) throws Exception {
-        String subject = Jwts.parserBuilder().setSigningKey(key()).build()
-                .parseClaimsJws(token).getBody().getSubject();
+        String subject = null;
+        try {
+            subject = Jwts.parserBuilder().setSigningKey(key()).build()
+                    .parseClaimsJws(token).getBody().getSubject();
+        } catch (ExpiredJwtException ex) {
+            subject = ex.getClaims().getSubject();
+        }
+
         if (subject == null) {
             throw new Exception(ExceptionMessageCase.INVALID_AUTHENTICATION_TOKEN);
         }

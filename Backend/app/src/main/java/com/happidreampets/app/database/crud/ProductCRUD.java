@@ -20,7 +20,12 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.happidreampets.app.constants.AnimalConstants;
+import com.happidreampets.app.constants.CategoryConstants;
+import com.happidreampets.app.constants.ColorVariantConstants;
 import com.happidreampets.app.constants.ProductConstants;
+import com.happidreampets.app.constants.SizeVariantConstants;
+import com.happidreampets.app.constants.WeightVariantConstants;
 import com.happidreampets.app.constants.ProductConstants.CamelCase;
 import com.happidreampets.app.constants.ProductConstants.LoggerCase;
 import com.happidreampets.app.constants.ProductConstants.LowerCase;
@@ -33,6 +38,7 @@ import com.happidreampets.app.controller.APIController.ERROR_CODES;
 import com.happidreampets.app.database.model.Category;
 import com.happidreampets.app.database.model.Product;
 import com.happidreampets.app.database.model.Product.PRODUCTCOLUMN;
+import com.happidreampets.app.database.model.Product.VARIANT_TYPE;
 import com.happidreampets.app.database.model.ProductImage;
 import com.happidreampets.app.database.model.Product.WEIGHT_UNITS;
 import com.happidreampets.app.database.repository.ProductRepository;
@@ -55,6 +61,21 @@ public class ProductCRUD {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private WeightVariantCRUD weightVariantCRUD;
+
+    @Autowired
+    private ColorVariantCRUD colorVariantCRUD;
+
+    @Autowired
+    private SizeVariantCRUD sizeVariantCRUD;
+
+    @Autowired
+    private AnimalCRUD animalCRUD;
+
+    @Autowired
+    private CategoryCRUD categoryCRUD;
 
     private ObjectMapper objectMapper;
 
@@ -116,7 +137,7 @@ public class ProductCRUD {
         return pageData;
     }
 
-    public JSONObject getProductDetailsForUI(Category category, Long minPrice, Long maxPrice) {
+    public JSONObject getProductDetailsForUI(Category category, Long minPrice, Long maxPrice, Boolean skipVisibility) {
         JSONObject productData = new JSONObject();
         Sort sort = null;
         if (getDbFilter() != null && checkAndGetColumnName() != null) {
@@ -128,9 +149,10 @@ public class ProductCRUD {
         Page<Product> productPage = null;
         if (minPrice != null || maxPrice != null) {
             productPage = productRepository.findAllProductsForUIByCategoryByMinAndMaxPrice(pageable, category,
-                    minPrice != null ? minPrice : Long.MIN_VALUE, maxPrice != null ? maxPrice : Long.MAX_VALUE);
+                    minPrice != null ? minPrice : Long.MIN_VALUE, maxPrice != null ? maxPrice : Long.MAX_VALUE,
+                    skipVisibility);
         } else {
-            productPage = productRepository.findAllProductsForUIByCategory(pageable, category);
+            productPage = productRepository.findAllProductsForUIByCategory(pageable, category, skipVisibility);
         }
         Iterable<Product> productIterable = productPage.getContent();
         productData.put(LowerCase.DATA, getDataInRequiredFormat(productIterable).get(LowerCase.DATA));
@@ -138,9 +160,39 @@ public class ProductCRUD {
         return productData;
     }
 
-    public JSONObject getProductForUI(Long id, Category category) {
+    public JSONObject getAllProductDetailsForVariation(Category category, Boolean skipVisibility) {
         JSONObject productData = new JSONObject();
-        Product product = productRepository.findProductForUIByCategory(id, category);
+        Iterable<Product> productIterable = productRepository.findAllProductsByCategory(category, skipVisibility);
+        productData.put(LowerCase.DATA, getDataInRequiredFormat(productIterable).get(LowerCase.DATA));
+        return productData;
+    }
+
+    public JSONObject getProductVariantDetailsForUI(Long id, Category category) {
+        JSONObject productData = new JSONObject();
+        Product product = productRepository.findProductVariantForUIByCategory(id, category);
+
+        JSONObject variationInfo = new JSONObject();
+        variationInfo.put(WeightVariantConstants.SnakeCase.WEIGHT_VARIANT_INFO, JSONObject.NULL);
+        variationInfo.put(SizeVariantConstants.SnakeCase.SIZE_VARIANT_INFO, JSONObject.NULL);
+        variationInfo.put(ColorVariantConstants.SnakeCase.COLOR_VARIANT_INFO, JSONObject.NULL);
+        if (product.getVariantWeightId() != null) {
+            variationInfo.put(WeightVariantConstants.SnakeCase.WEIGHT_VARIANT_INFO,
+                    weightVariantCRUD.getWeightVariantDetails(product.getVariantWeightId()));
+        }
+        if (product.getVariantSizeId() != null) {
+            variationInfo.put(SizeVariantConstants.SnakeCase.SIZE_VARIANT_INFO,
+                    sizeVariantCRUD.getSizeVariantDetails(product.getVariantSizeId()));
+        }
+        if (product.getVariantColorId() != null) {
+            variationInfo.put(ColorVariantConstants.SnakeCase.COLOR_VARIANT_INFO,
+                    colorVariantCRUD.getColorVariantDetails(product.getVariantColorId()));
+        }
+        return productData;
+    }
+
+    public JSONObject getProductForUI(Long id, Category category, Boolean skipVisibility) {
+        JSONObject productData = new JSONObject();
+        Product product = productRepository.findProductForUIByCategory(id, category, skipVisibility);
         if (getDbFilter() != null && getDbFilter().getFormat().equals(DATAFORMAT.JSON)) {
             productData.put(LowerCase.DATA, product != null ? product.toJSON(Boolean.TRUE, Boolean.TRUE) : product);
         } else {
@@ -149,8 +201,8 @@ public class ProductCRUD {
         return productData;
     }
 
-    public Boolean checkProductExistsForCategory(Long id, Category category) {
-        JSONObject product = getProductForUI(id, category);
+    public Boolean checkProductExistsForCategory(Long id, Category category, Boolean skipVisibility) {
+        JSONObject product = getProductForUI(id, category, skipVisibility);
         if (product.has(LowerCase.DATA)) {
             if (product.get(LowerCase.DATA) != null) {
                 return true;
@@ -175,15 +227,6 @@ public class ProductCRUD {
         return createProduct(category, name, description, richTextDetails, details, color, size, weight_units, weight,
                 stocks, price,
                 true, null, null, null);
-    }
-
-    public Product createVariantProduct(Category category, String name, String description, String richTextDetails,
-            String details,
-            String color, String size, WEIGHT_UNITS weight_units, Integer weight, Long stocks, Long price,
-            Boolean isVisible, Long variant_size_id, Long variant_color_id, Long variant_weight_id) throws Exception {
-        return createProduct(category, name, description, richTextDetails, details, color, size, weight_units, weight,
-                stocks, price,
-                isVisible, variant_size_id, variant_color_id, variant_weight_id);
     }
 
     private Product createProduct(Category category, String name, String description, String richTextDetails,
@@ -239,6 +282,101 @@ public class ProductCRUD {
         product.setToBeDeleted(false);
         product.setAddedTime(System.currentTimeMillis());
         return productRepository.save(product);
+    }
+
+    public void createProductVariant(Product currentProduct, Product variantProduct, VARIANT_TYPE variantType)
+            throws Exception {
+        if (variantType.equals(VARIANT_TYPE.WEIGHT)) {
+            if (currentProduct.getVariantWeightId() != null && variantProduct.getVariantWeightId() != null) {
+                if (currentProduct.getVariantWeightId() == variantProduct.getVariantWeightId()) {
+                    throw new Exception(WeightVariantConstants.ExceptionMessageCase.ALREADY_WEIGHT_VARIANT_ADDED);
+                } else {
+                    throw new Exception(
+                            WeightVariantConstants.ExceptionMessageCase.WEIGHT_VARIANT_ADDED_TO_OTHER_PRODUCT);
+                }
+            } else {
+                Long variantId = 0l;
+                if (currentProduct.getVariantWeightId() != null) {
+                    variantId = weightVariantCRUD
+                            .createWeightVariant(variantProduct, currentProduct.getVariantWeightId()).getVariantId();
+                    variantProduct.setVariantWeightId(variantId);
+                    productRepository.save(variantProduct);
+                } else if (variantProduct.getVariantWeightId() != null) {
+                    variantId = weightVariantCRUD
+                            .createWeightVariant(currentProduct, variantProduct.getVariantWeightId()).getVariantId();
+                    currentProduct.setVariantWeightId(variantId);
+                    productRepository.save(currentProduct);
+                } else {
+                    variantId = weightVariantCRUD.createWeightVariantWithoutVariantId(currentProduct).getVariantId();
+                    currentProduct.setVariantWeightId(variantId);
+                    productRepository.save(currentProduct);
+                    variantId = weightVariantCRUD
+                            .createWeightVariant(variantProduct, currentProduct.getVariantWeightId()).getVariantId();
+                    variantProduct.setVariantWeightId(variantId);
+                    productRepository.save(variantProduct);
+                }
+            }
+        } else if (variantType.equals(VARIANT_TYPE.SIZE)) {
+            if (currentProduct.getVariantSizeId() != null && variantProduct.getVariantSizeId() != null) {
+                if (currentProduct.getVariantSizeId() == variantProduct.getVariantSizeId()) {
+                    throw new Exception(SizeVariantConstants.ExceptionMessageCase.ALREADY_SIZE_VARIANT_ADDED);
+                } else {
+                    throw new Exception(
+                            SizeVariantConstants.ExceptionMessageCase.SIZE_VARIANT_ADDED_TO_OTHER_PRODUCT);
+                }
+            } else {
+                Long variantId = 0l;
+                if (currentProduct.getVariantSizeId() != null) {
+                    variantId = sizeVariantCRUD
+                            .createSizeVariant(variantProduct, currentProduct.getVariantSizeId()).getVariantId();
+                    variantProduct.setVariantSizeId(variantId);
+                    productRepository.save(variantProduct);
+                } else if (variantProduct.getVariantSizeId() != null) {
+                    variantId = sizeVariantCRUD
+                            .createSizeVariant(currentProduct, variantProduct.getVariantSizeId()).getVariantId();
+                    currentProduct.setVariantSizeId(variantId);
+                    productRepository.save(currentProduct);
+                } else {
+                    variantId = sizeVariantCRUD.createSizeVariantWithoutVariantId(currentProduct).getVariantId();
+                    currentProduct.setVariantSizeId(variantId);
+                    productRepository.save(currentProduct);
+                    variantId = sizeVariantCRUD
+                            .createSizeVariant(variantProduct, currentProduct.getVariantSizeId()).getVariantId();
+                    variantProduct.setVariantSizeId(variantId);
+                    productRepository.save(variantProduct);
+                }
+            }
+        } else if (variantType.equals(VARIANT_TYPE.COLOR)) {
+            if (currentProduct.getVariantColorId() != null && variantProduct.getVariantColorId() != null) {
+                if (currentProduct.getVariantColorId() == variantProduct.getVariantColorId()) {
+                    throw new Exception(ColorVariantConstants.ExceptionMessageCase.ALREADY_COLOR_VARIANT_ADDED);
+                } else {
+                    throw new Exception(
+                            ColorVariantConstants.ExceptionMessageCase.COLOR_VARIANT_ADDED_TO_OTHER_PRODUCT);
+                }
+            } else {
+                Long variantId = 0l;
+                if (currentProduct.getVariantColorId() != null) {
+                    variantId = colorVariantCRUD
+                            .createColorVariant(variantProduct, currentProduct.getVariantColorId()).getVariantId();
+                    variantProduct.setVariantSizeId(variantId);
+                    productRepository.save(variantProduct);
+                } else if (variantProduct.getVariantColorId() != null) {
+                    variantId = colorVariantCRUD
+                            .createColorVariant(currentProduct, variantProduct.getVariantColorId()).getVariantId();
+                    currentProduct.setVariantSizeId(variantId);
+                    productRepository.save(currentProduct);
+                } else {
+                    variantId = colorVariantCRUD.createSizeVariantWithoutVariantId(currentProduct).getVariantId();
+                    currentProduct.setVariantSizeId(variantId);
+                    productRepository.save(currentProduct);
+                    variantId = colorVariantCRUD
+                            .createColorVariant(variantProduct, currentProduct.getVariantSizeId()).getVariantId();
+                    variantProduct.setVariantSizeId(variantId);
+                    productRepository.save(variantProduct);
+                }
+            }
+        }
     }
 
     public Product updateProduct(Long id, String name, String description, String richTextDetails, String details,
@@ -325,6 +463,35 @@ public class ProductCRUD {
         product.setToBeDeletedStatusChangeTime(System.currentTimeMillis());
         productRepository.save(product);
         return true;
+    }
+
+    public void deleteProductVariant(Product currentProduct, VARIANT_TYPE variantType)
+            throws Exception {
+        if (variantType.equals(VARIANT_TYPE.WEIGHT)) {
+            if (currentProduct.getVariantWeightId() == null) {
+                throw new Exception(WeightVariantConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
+            } else {
+                weightVariantCRUD.deleteWeightVariant(currentProduct, currentProduct.getVariantWeightId());
+                currentProduct.setVariantWeightId(null);
+                productRepository.save(currentProduct);
+            }
+        } else if (variantType.equals(VARIANT_TYPE.SIZE)) {
+            if (currentProduct.getVariantSizeId() == null) {
+                throw new Exception(WeightVariantConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
+            } else {
+                sizeVariantCRUD.deleteSizeVariant(currentProduct, currentProduct.getVariantSizeId());
+                currentProduct.setVariantSizeId(null);
+                productRepository.save(currentProduct);
+            }
+        } else if (variantType.equals(VARIANT_TYPE.COLOR)) {
+            if (currentProduct.getVariantColorId() == null) {
+                throw new Exception(WeightVariantConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
+            } else {
+                colorVariantCRUD.deleteColorVariant(currentProduct, currentProduct.getVariantColorId());
+                currentProduct.setVariantColorId(null);
+                productRepository.save(currentProduct);
+            }
+        }
     }
 
     public JSONObject checkBodyOfCreateProduct(JSONObject body) {
@@ -432,6 +599,50 @@ public class ProductCRUD {
         return response;
     }
 
+    public JSONObject checkBodyOfDeleteImages(JSONObject body) {
+        JSONObject response = new JSONObject();
+        Boolean isSuccess = Boolean.FALSE;
+        String missingField = LowerCase.EMPTY_QUOTES;
+        String message = MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
+        String code = ERROR_CODES.MANDATORY_MISSING.name();
+        if (!body.has(SnakeCase.IMAGE_IDS)) {
+            missingField = SnakeCase.IMAGE_IDS;
+            message = message.replace(LoggerCase.ARG0, SnakeCase.IMAGE_IDS);
+        } else {
+            Boolean isError = false;
+            if (body.get(SnakeCase.IMAGE_IDS) instanceof List) {
+                List<?> imageIds = (List<?>) body.get(SnakeCase.IMAGE_IDS);
+                int index = 1;
+                for (Object item : imageIds) {
+                    if (!(item instanceof Long)) {
+                        code = null;
+                        message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                        message += " in the Position " + index + " of the products array";
+                        missingField = ProductConstants.LowerCase.PRODUCTS;
+                        isError = Boolean.TRUE;
+                        break;
+                    }
+                    index++;
+                }
+            } else {
+                code = null;
+                message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_ARRAY_OF_INTEGERS;
+                missingField = ProductConstants.LowerCase.PRODUCTS;
+                isError = Boolean.TRUE;
+            }
+
+            if (!isError) {
+                isSuccess = Boolean.TRUE;
+            }
+        }
+        response.put(LowerCase.SUCCESS, isSuccess);
+        if (!isSuccess) {
+            response.put(LowerCase.DATA, new JSONObject().put(LowerCase.FIELD, missingField).put(LowerCase.CODE, code)
+                    .put(LowerCase.MESSAGE, message));
+        }
+        return response;
+    }
+
     public JSONObject checkBodyOfUpdateProduct(JSONObject body) {
         JSONObject response = new JSONObject();
         Boolean isSuccess = Boolean.FALSE;
@@ -520,6 +731,97 @@ public class ProductCRUD {
         return response;
     }
 
+    public JSONObject checkBodyOfCreateVariation(JSONObject body) {
+        JSONObject response = new JSONObject();
+        Boolean isSuccess = Boolean.FALSE;
+        String missingField = LowerCase.EMPTY_QUOTES;
+        String message = MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
+        String code = ERROR_CODES.MANDATORY_MISSING.name();
+        if (!body.has(AnimalConstants.SnakeCase.ANIMAL_ID)) {
+            missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+            message = message.replace(LoggerCase.ARG0, AnimalConstants.SnakeCase.ANIMAL_ID);
+        } else if (!body.has(CategoryConstants.SnakeCase.CATEGORY_ID)) {
+            missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+            message = message.replace(LoggerCase.ARG0, CategoryConstants.SnakeCase.CATEGORY_ID);
+        } else if (!body.has(SnakeCase.PRODUCT_ID)) {
+            missingField = SnakeCase.PRODUCT_ID;
+            message = message.replace(LoggerCase.ARG0, SnakeCase.PRODUCT_ID);
+        } else if (!body.has(SnakeCase.VARIANT_TYPE)) {
+            missingField = SnakeCase.VARIANT_TYPE;
+            message = message.replace(LoggerCase.ARG0, SnakeCase.VARIANT_TYPE);
+        } else {
+            Boolean isError = false;
+            if (body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Long) {
+                Long animalId = Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString());
+                if (animalCRUD.getAnimal(animalId) == null) {
+                    code = null;
+                    message = AnimalConstants.ExceptionMessageCase.INVALID_ANIMAL_ID;
+                    missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+                    isError = true;
+                }
+            } else {
+                code = null;
+                message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+                isError = true;
+            }
+
+            if (!isError) {
+                if (body.get(CategoryConstants.SnakeCase.CATEGORY_ID) instanceof Long) {
+                    Long categoryId = Long.parseLong(body.get(CategoryConstants.SnakeCase.CATEGORY_ID).toString());
+                    if (categoryCRUD.getCategoryDetail(
+                            animalCRUD.getAnimal(
+                                    Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString())),
+                            categoryId) == null) {
+                        code = null;
+                        message = CategoryConstants.ExceptionMessageCase.INVALID_CATEGORY_ID;
+                        missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+                        isError = true;
+                    }
+                } else {
+                    code = null;
+                    message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                    missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+                    isError = true;
+                }
+            }
+
+            if (!isError) {
+                if (body.get(SnakeCase.PRODUCT_ID) instanceof Long) {
+                    Long productId = Long.parseLong(body.get(SnakeCase.PRODUCT_ID).toString());
+                    Long categoryId = Long.parseLong(body.get(CategoryConstants.SnakeCase.CATEGORY_ID).toString());
+                    Product product = getProduct(productId, categoryCRUD.getCategoryDetail(
+                            animalCRUD.getAnimal(
+                                    Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString())),
+                            categoryId));
+                    if (product == null) {
+                        code = null;
+                        message = ExceptionMessageCase.INVALID_PRODUCT_ID;
+                        missingField = SnakeCase.PRODUCT_ID;
+                        isError = true;
+                    } else {
+                        response.put(LowerCase.PRODUCT, product);
+                    }
+                } else {
+                    code = null;
+                    message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                    missingField = SnakeCase.PRODUCT_ID;
+                    isError = true;
+                }
+            }
+
+            if (!isError) {
+                isSuccess = Boolean.TRUE;
+            }
+        }
+        response.put(LowerCase.SUCCESS, isSuccess);
+        if (!isSuccess) {
+            response.put(LowerCase.DATA, new JSONObject().put(LowerCase.FIELD, missingField).put(LowerCase.CODE, code)
+                    .put(LowerCase.MESSAGE, message));
+        }
+        return response;
+    }
+
     public Boolean isValidFileExtension(String fileFullName) {
         String extension = fileFullName.substring(fileFullName.lastIndexOf(SpecialCharacter.DOT) + 1);
         List<String> allowedExtension = new ArrayList<>();
@@ -531,6 +833,22 @@ public class ProductCRUD {
 
     public String getExtension(String fileFullName) {
         return fileFullName.substring(fileFullName.lastIndexOf(SpecialCharacter.DOT) + 1);
+    }
+
+    public void checkImageIds(Product product, List<Long> imageIds) throws Exception {
+        List<ProductImage> existingImages = product.getImages();
+        if (existingImages == null) {
+            existingImages = new ArrayList<>();
+        }
+        List<Long> existingImageIds = new ArrayList<>();
+        for (ProductImage data : existingImages) {
+            existingImageIds.add(data.getId());
+        }
+        for (Long imageId : imageIds) {
+            if (!existingImageIds.contains(imageId)) {
+                throw new Exception(ExceptionMessageCase.IMAGE_ID_IN_GIVEN_LIST_NOT_FOUND_FOR_THE_PRODUCT);
+            }
+        }
     }
 
     public void deleteImageFromProduct(Product product, Long imageId) throws Exception {
@@ -556,8 +874,10 @@ public class ProductCRUD {
         }
         existingImages.remove(currentImage);
         product.setImages(existingImages.isEmpty() ? null : existingImages);
-        if (currentImage.getId().equals(product.getThumbnailImageUrl().getId())) {
-            product.setThumbnailImageUrl(null);
+        if (product.getThumbnailImageUrl() != null) {
+            if (currentImage.getId().equals(product.getThumbnailImageUrl().getId())) {
+                product.setThumbnailImageUrl(null);
+            }
         }
         productRepository.save(product);
     }

@@ -149,7 +149,7 @@ function Category({ categoryType, isAdminPanelUsage, onDelete, onEdit, animalId_
       }
       setManualPageNumber(currentPageNumber);
       setManualRefresh(true);
-      UINotification({ message: (isAnimalTypeCategory ? "Animal" : "Category") + currentElement.name + " is deleted", type: "Error" });
+      UINotification({ message: (isAnimalTypeCategory ? "Animal" : "Category") + currentElement.name + " is deleted", type: "Success" });
       if(onDelete && typeof onDelete === "function"){
         onDelete();
       }

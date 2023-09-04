@@ -35,6 +35,7 @@ import com.happidreampets.app.database.crud.TopCategoriesCRUD;
 import com.happidreampets.app.database.crud.UserAddressCRUD;
 import com.happidreampets.app.database.crud.UserCRUD;
 import com.happidreampets.app.database.model.Cart;
+import com.happidreampets.app.database.model.Product;
 import com.happidreampets.app.database.model.User;
 import com.happidreampets.app.database.model.UserAddressNonDBModel;
 import com.happidreampets.app.database.model.User.USER_ROLE;
@@ -90,7 +91,7 @@ public class UserController extends APIController {
                 throw new Exception(ExceptionMessageCase.USER_NOT_CONFIRMED);
             }
 
-            JSONObject jwtData = jwtUtils.getJwtToken(user, true);
+            JSONObject jwtData = jwtUtils.getJwtToken(user, true, true);
 
             successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, user.getId())
                     .put(UserConstants.LowerCase.NAME, user.getName())
@@ -634,8 +635,6 @@ public class UserController extends APIController {
 
             CartCRUD cartCRUD = getCartCRUD();
 
-            ProductCRUD productCRUD = getProductCRUD();
-
             JSONObject validationResult = cartCRUD.checkBodyOfAddProductsInCart(body);
             if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
@@ -644,7 +643,7 @@ public class UserController extends APIController {
             }
 
             Cart data = cartCRUD.createCart(getCurrentUser(),
-                    productCRUD.getProduct(Long.valueOf(body.get(ProductConstants.SnakeCase.PRODUCT_ID).toString())),
+                    (Product) validationResult.get(ProductConstants.LowerCase.PRODUCT),
                     Long.valueOf(body.get(CartConstants.LowerCase.QUANTITY).toString()));
             successResponse = new SuccessResponse();
             if (data == null) {
@@ -674,8 +673,6 @@ public class UserController extends APIController {
 
             CartCRUD cartCRUD = getCartCRUD();
 
-            ProductCRUD productCRUD = getProductCRUD();
-
             JSONObject validationResult = cartCRUD.checkBodyOfAddProductsInCart(body);
             if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
@@ -684,7 +681,7 @@ public class UserController extends APIController {
             }
 
             Cart data = cartCRUD.updateCartProductQuantity(getCurrentUser(),
-                    productCRUD.getProduct(Long.valueOf(body.get(ProductConstants.SnakeCase.PRODUCT_ID).toString())),
+                    (Product) validationResult.get(ProductConstants.LowerCase.PRODUCT),
                     Long.valueOf(body.get(CartConstants.LowerCase.QUANTITY).toString()));
             successResponse = new SuccessResponse();
             if (data == null) {
