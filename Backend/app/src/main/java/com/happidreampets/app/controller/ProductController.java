@@ -437,7 +437,11 @@ public class ProductController extends APIController {
             ProductCRUD productCRUD = getProductCRUD();
             JSONObject data = productCRUD.getProductVariantDetailsForUI(currentProduct.getId(), getCurrentCategory());
             successResponse = new SuccessResponse();
-            successResponse.setApiResponseStatus(HttpStatus.OK);
+            if (data.isEmpty()) {
+                successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
+            } else {
+                successResponse.setApiResponseStatus(HttpStatus.OK);
+            }
             successResponse.setResponseData(data);
             return successResponse.getResponse();
         } catch (Exception ex) {
@@ -461,7 +465,7 @@ public class ProductController extends APIController {
                 throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_BODY_FOR_CREATE_VARIATION);
             }
             VARIANT_TYPE variantType = VARIANT_TYPE
-                    .valueOf(validationResult.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
+                    .valueOf(bodyData.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
 
             productCRUD.createProductVariant(currentProduct,
                     (Product) validationResult.get(ProductConstants.LowerCase.PRODUCT), variantType);
@@ -492,7 +496,7 @@ public class ProductController extends APIController {
                 throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_BODY_FOR_DELETE_VARIATION);
             }
             VARIANT_TYPE variantType = VARIANT_TYPE
-                    .valueOf(validationResult.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
+                    .valueOf(bodyData.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
 
             productCRUD.deleteProductVariant(currentProduct, variantType);
             successResponse = new SuccessResponse();
@@ -504,6 +508,41 @@ public class ProductController extends APIController {
             if (!errorData.isEmpty()) {
                 productControllerExceptions.setData(errorData);
             }
+            return productControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/product/variation/list", method = RequestMethod.GET)
+    public ResponseEntity<String> getProductsWithoutVariation(
+            @RequestParam(value = ProductConstants.SnakeCase.VARIANT_TYPE, required = true) String variationType) {
+        SuccessResponse successResponse = new SuccessResponse();
+        try {
+            VARIANT_TYPE variantType = VARIANT_TYPE.getEnumValueFromGivenString(variationType);
+
+            if (variantType == null) {
+                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_VARIANT_TYPE);
+            }
+
+            DbFilter dbFilter = new DbFilter();
+            dbFilter.setFormat(DATAFORMAT.JSON);
+            ProductCRUD productCRUD = getProductCRUD();
+            productCRUD.setDbFilter(dbFilter);
+            JSONObject data = productCRUD.getAllAvailableProductDetailsForGivenVariation(getCurrentCategory(),
+                    variantType,
+                    false);
+            successResponse = new SuccessResponse();
+            if (data.has(ProductConstants.LowerCase.DATA)
+                    && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
+                successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
+            } else {
+                successResponse.setApiResponseStatus(HttpStatus.OK);
+            }
+            successResponse.setResponseData(data);
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            ProductControllerExceptions productControllerExceptions = new ProductControllerExceptions();
+            productControllerExceptions.setException(ex);
             return productControllerExceptions.returnResponseBasedOnException();
         }
     }

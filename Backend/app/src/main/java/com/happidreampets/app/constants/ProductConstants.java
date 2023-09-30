@@ -110,6 +110,8 @@ public class ProductConstants {
         public static final String INVALID_IMAGE_IDS_FOR_DELETE = "Invalid Image Ids for Delete";
         public static final String INVALID_BODY_FOR_CREATE_VARIATION = "Invalid Body for Create Variation";
         public static final String INVALID_BODY_FOR_DELETE_VARIATION = "Invalid Body for Delete Variation";
+        public static final String VARIANT_NOT_PRESENT = "Variant Not Present";
+        public static final String INVALID_VARIANT_TYPE = "Invalid Variant Type";
     }
 
     public class OtherCase {

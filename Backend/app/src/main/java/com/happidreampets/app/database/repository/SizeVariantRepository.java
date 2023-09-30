@@ -2,7 +2,6 @@ package com.happidreampets.app.database.repository;
 
 import java.util.List;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
@@ -24,7 +23,7 @@ public interface SizeVariantRepository extends CrudRepository<SizeVariant, Long>
 
     SizeVariant findById(long id);
 
-    Page<SizeVariant> findAllByVariantId(Long variantId);
+    List<SizeVariant> findAllByVariantId(Long variantId);
 
     @Query("SELECT MAX(sv.variantId) FROM SizeVariant sv")
     Long findMaxVariantId();

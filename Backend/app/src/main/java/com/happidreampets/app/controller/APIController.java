@@ -633,7 +633,7 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "Color Variant Relation Already Exists With other product"));
                     return failureResponse.throwInvalidBodyInput();
-                case WeightVariantConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT:
+                case ProductConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse
                             .setData(

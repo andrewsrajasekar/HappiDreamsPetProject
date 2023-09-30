@@ -6,7 +6,6 @@ import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import com.happidreampets.app.constants.ProductConstants;
@@ -58,22 +57,11 @@ public class ColorVariantCRUD {
         return responseData;
     }
 
-    private JSONObject getPageData(Page<ColorVariant> colorVariantPage) {
-        JSONObject pageData = new JSONObject();
-        pageData.put(ProductConstants.LowerCase.PAGE, colorVariantPage.getNumber() + 1);
-        pageData.put(ProductConstants.SnakeCase.PER_PAGE, colorVariantPage.getSize());
-        pageData.put(ProductConstants.LowerCase.COUNT, colorVariantPage.getContent().size());
-        pageData.put(ProductConstants.SnakeCase.MORE_RECORDS, colorVariantPage.hasNext());
-        return pageData;
-    }
-
     public JSONObject getColorVariantDetails(Long variantId) {
         JSONObject colorVariantData = new JSONObject();
-        Page<ColorVariant> colorVariantPage = colorVariantRepository.findAllByVariantId(variantId);
-        Iterable<ColorVariant> colorVariantIterable = colorVariantPage.getContent();
+        List<ColorVariant> colorVariantPage = colorVariantRepository.findAllByVariantId(variantId);
         colorVariantData.put(ProductConstants.LowerCase.DATA,
-                getDataInRequiredFormat(colorVariantIterable).get(ProductConstants.LowerCase.DATA));
-        colorVariantData.put(ProductConstants.LowerCase.INFO, getPageData(colorVariantPage));
+                getDataInRequiredFormat(colorVariantPage).get(ProductConstants.LowerCase.DATA));
         return colorVariantData;
     }
 

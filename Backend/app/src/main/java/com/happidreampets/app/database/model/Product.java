@@ -46,7 +46,16 @@ public class Product {
     public enum VARIANT_TYPE {
         WEIGHT,
         COLOR,
-        SIZE
+        SIZE;
+
+        public static VARIANT_TYPE getEnumValueFromGivenString(String value) {
+            for (VARIANT_TYPE enumValue : values()) {
+                if (enumValue.name().equalsIgnoreCase(value)) {
+                    return enumValue;
+                }
+            }
+            return null;
+        }
     }
 
     public enum PRODUCTCOLUMN {
@@ -155,6 +164,11 @@ public class Product {
     private Long addedTime;
 
     public Product() {
+    }
+
+    public Product(Long id, String name) {
+        this.id = id;
+        this.name = name;
     }
 
     public Product(Long id, String name, String color, String size, WEIGHT_UNITS weightUnits, Integer weight,

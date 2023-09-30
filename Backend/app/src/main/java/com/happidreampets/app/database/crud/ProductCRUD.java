@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.json.JSONArray;
@@ -47,6 +49,8 @@ import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
 
 @Component
 public class ProductCRUD {
+
+    private static final Logger LOG = Logger.getLogger(ProductCRUD.class.getName());
 
     @Value("${products.image.size}")
     Integer productImagesSize;
@@ -160,6 +164,21 @@ public class ProductCRUD {
         return productData;
     }
 
+    public JSONObject getAllAvailableProductDetailsForGivenVariation(Category category, VARIANT_TYPE variantType,
+            Boolean skipVisibility) {
+        JSONObject productData = new JSONObject();
+        Iterable<Product> productIterable = null;
+        if (variantType == VARIANT_TYPE.COLOR) {
+            productIterable = productRepository.findProductsNotInColorVariant(category, skipVisibility);
+        } else if (variantType == VARIANT_TYPE.SIZE) {
+            productIterable = productRepository.findProductsNotInSizeVariant(category, skipVisibility);
+        } else if (variantType == VARIANT_TYPE.WEIGHT) {
+            productIterable = productRepository.findProductsNotInWeightVariant(category, skipVisibility);
+        }
+        productData.put(LowerCase.DATA, getDataInRequiredFormat(productIterable).get(LowerCase.DATA));
+        return productData;
+    }
+
     public JSONObject getAllProductDetailsForVariation(Category category, Boolean skipVisibility) {
         JSONObject productData = new JSONObject();
         Iterable<Product> productIterable = productRepository.findAllProductsByCategory(category, skipVisibility);
@@ -169,7 +188,13 @@ public class ProductCRUD {
 
     public JSONObject getProductVariantDetailsForUI(Long id, Category category) {
         JSONObject productData = new JSONObject();
-        Product product = productRepository.findProductVariantForUIByCategory(id, category);
+        Product product = null;
+        try {
+            product = productRepository.findByIdAndCategoryAndToBeDeletedIsFalse(id, category);
+        } catch (Exception ex) {
+            LOG.log(Level.SEVERE, "Excep ::: " + ex.getMessage());
+            throw ex;
+        }
 
         JSONObject variationInfo = new JSONObject();
         variationInfo.put(WeightVariantConstants.SnakeCase.WEIGHT_VARIANT_INFO, JSONObject.NULL);
@@ -212,7 +237,7 @@ public class ProductCRUD {
     }
 
     public Product getProduct(Long id, Category category) {
-        Product product = productRepository.findByIdAndCategory(id, category);
+        Product product = productRepository.findByIdAndCategoryAndToBeDeletedIsFalse(id, category);
         return product;
     }
 
@@ -469,7 +494,7 @@ public class ProductCRUD {
             throws Exception {
         if (variantType.equals(VARIANT_TYPE.WEIGHT)) {
             if (currentProduct.getVariantWeightId() == null) {
-                throw new Exception(WeightVariantConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
+                throw new Exception(ProductConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
             } else {
                 weightVariantCRUD.deleteWeightVariant(currentProduct, currentProduct.getVariantWeightId());
                 currentProduct.setVariantWeightId(null);
@@ -477,7 +502,7 @@ public class ProductCRUD {
             }
         } else if (variantType.equals(VARIANT_TYPE.SIZE)) {
             if (currentProduct.getVariantSizeId() == null) {
-                throw new Exception(WeightVariantConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
+                throw new Exception(ProductConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
             } else {
                 sizeVariantCRUD.deleteSizeVariant(currentProduct, currentProduct.getVariantSizeId());
                 currentProduct.setVariantSizeId(null);
@@ -485,7 +510,7 @@ public class ProductCRUD {
             }
         } else if (variantType.equals(VARIANT_TYPE.COLOR)) {
             if (currentProduct.getVariantColorId() == null) {
-                throw new Exception(WeightVariantConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
+                throw new Exception(ProductConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
             } else {
                 colorVariantCRUD.deleteColorVariant(currentProduct, currentProduct.getVariantColorId());
                 currentProduct.setVariantColorId(null);
@@ -751,19 +776,30 @@ public class ProductCRUD {
             message = message.replace(LoggerCase.ARG0, SnakeCase.VARIANT_TYPE);
         } else {
             Boolean isError = false;
-            if (body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Long) {
-                Long animalId = Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString());
-                if (animalCRUD.getAnimal(animalId) == null) {
+
+            if (VARIANT_TYPE
+                    .valueOf(body.get(SnakeCase.VARIANT_TYPE).toString()) == null) {
+                code = null;
+                message = ExceptionMessageCase.INVALID_VARIANT_TYPE;
+                missingField = SnakeCase.VARIANT_TYPE;
+                isError = true;
+            }
+
+            if (!isError) {
+                if (body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Long) {
+                    Long animalId = Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString());
+                    if (animalCRUD.getAnimal(animalId) == null) {
+                        code = null;
+                        message = AnimalConstants.ExceptionMessageCase.INVALID_ANIMAL_ID;
+                        missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+                        isError = true;
+                    }
+                } else {
                     code = null;
-                    message = AnimalConstants.ExceptionMessageCase.INVALID_ANIMAL_ID;
+                    message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
                     missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
                     isError = true;
                 }
-            } else {
-                code = null;
-                message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
-                missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
-                isError = true;
             }
 
             if (!isError) {

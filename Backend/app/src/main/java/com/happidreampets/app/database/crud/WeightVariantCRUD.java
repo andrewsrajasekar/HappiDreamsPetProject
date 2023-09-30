@@ -6,7 +6,6 @@ import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
 import com.happidreampets.app.constants.ColorVariantConstants;
@@ -57,22 +56,11 @@ public class WeightVariantCRUD {
         return responseData;
     }
 
-    private JSONObject getPageData(Page<WeightVariant> weightVariantPage) {
-        JSONObject pageData = new JSONObject();
-        pageData.put(ProductConstants.LowerCase.PAGE, weightVariantPage.getNumber() + 1);
-        pageData.put(ProductConstants.SnakeCase.PER_PAGE, weightVariantPage.getSize());
-        pageData.put(ProductConstants.LowerCase.COUNT, weightVariantPage.getContent().size());
-        pageData.put(ProductConstants.SnakeCase.MORE_RECORDS, weightVariantPage.hasNext());
-        return pageData;
-    }
-
     public JSONObject getWeightVariantDetails(Long variantId) {
         JSONObject weightVariantData = new JSONObject();
-        Page<WeightVariant> weightVariantPage = weightVariantRepository.findAllByVariantId(variantId);
-        Iterable<WeightVariant> weightVariantIterable = weightVariantPage.getContent();
+        List<WeightVariant> weightVariantList = weightVariantRepository.findAllByVariantId(variantId);
         weightVariantData.put(ProductConstants.LowerCase.DATA,
-                getDataInRequiredFormat(weightVariantIterable).get(ProductConstants.LowerCase.DATA));
-        weightVariantData.put(ProductConstants.LowerCase.INFO, getPageData(weightVariantPage));
+                getDataInRequiredFormat(weightVariantList).get(ProductConstants.LowerCase.DATA));
         return weightVariantData;
     }
 

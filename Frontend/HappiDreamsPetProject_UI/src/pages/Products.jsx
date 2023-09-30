@@ -5,6 +5,7 @@ import UINotification from '../components/UINotification';
 import Pagination from '../components/Pagination';
 import Select from "react-select";
 import Modal from 'react-responsive-modal';
+import Variation from '../components/Variation';
 function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from_components, animal_info_from_components, hideTitleVisibility, handleCheckBox, checkedBoxIds, preventProductNavigation, isAdminPanelUsage, onEdit}){
     let { category_id } = useParams();
     let { animal_id } = useParams();
@@ -35,6 +36,7 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
     const [applyPriceAction, setApplyPriceAction] = useState(false);
     const [applyPriceActionIndex, setApplyPriceActionIndex] = useState(0);
     const [variationModalIsOpen, setVariationModalIsOpen] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState({});
     const [sortValueOptions, setSortValuesOptions] = useState([
       {id: -1, value: "default", label: "Select an option"},
       {id: 1, value: "name_asc", label: "Name, ASC"},
@@ -321,12 +323,7 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
       }
 
       const handleVariation = (productInfo) => {
-        productInfo.isExternalUpload = true;
-        productInfo.images = [];
-        productInfo.variationPrimaryId = productInfo.id;
-        // if(isAdminPanel){
-        //   onEdit(productInfo);
-        // }
+        setSelectedProduct(productInfo);
         setVariationModalIsOpen(true);
       }
 
@@ -567,8 +564,8 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
         {variationModalIsOpen && (
         <Modal closeOnOverlayClick={false} open={variationModalIsOpen} onClose={() => setVariationModalIsOpen(false)} center blockScroll={true} closeIconId={"variationModalClose"}  styles={{modal: {width: '50%'}}}>
       <div onClick={(event) => event.stopPropagation()}>
-        <h1 className="text-xl font-bold mb-6 -mt-2">Variation Details</h1>
-          <div>Dummy</div>
+        {/* <h1 className="text-xl font-bold mb-4 -mt-2">Variation Details</h1> */}
+          <div><Variation closeModal={() => {event.stopPropagation()}} animalId={animalInfo.id} categoryId={categoryInfo.id} productId={selectedProduct.id} productName={selectedProduct.name} /> </div>
       </div>
       </Modal>
       )}

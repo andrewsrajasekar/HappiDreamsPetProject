@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getAccessToken, logOutUser } from "./SessionDetails";
-import APIResponse from "../utils/APIResponse";
+import APIResponse, { createAPIResponse } from "../utils/APIResponse";
 //import { getUserId, getIsUserLoggedIn } from "./session";
 
 const IS_PRODUCTION_BUILD = false;
@@ -24,7 +24,7 @@ axiosInstance.interceptors.request.use(function (config) {
 
 axiosInstance.interceptors.response.use(
   response => {
-    let apiResponse ={...APIResponse};
+    let apiResponse = createAPIResponse();
     apiResponse.statusCode = response.status;
     apiResponse.isSuccess = true;
     
@@ -39,7 +39,7 @@ axiosInstance.interceptors.response.use(
     return apiResponse;
   },
   error => {
-    let apiResponse ={...APIResponse};
+    let apiResponse = createAPIResponse();
     let response = error.response;
     apiResponse.statusCode = response.status;
     apiResponse.isSuccess = false;
@@ -54,9 +54,26 @@ axiosInstance.interceptors.response.use(
         if(data.hasOwnProperty("errors")){
           apiResponse.failureResponse.errors = data.errors;
         }
+
     
         if(data.hasOwnProperty("message")){
           apiResponse.failureResponse.message = data.message;
+        }
+      }else{
+        if(response.data.hasOwnProperty("error_code")){
+          apiResponse.failureResponse.error_code = response.data.error_code;
+        }
+    
+        if(response.data.hasOwnProperty("errors")){
+          apiResponse.failureResponse.errors = response.data.errors;
+        }
+
+        if(response.data.hasOwnProperty("error")){
+          apiResponse.failureResponse.errors = response.data.error;
+        }
+        
+        if(response.data.hasOwnProperty("message")){
+          apiResponse.failureResponse.message = response.data.message;
         }
       }
     }else if(response.hasOwnProperty("data")){
@@ -73,7 +90,7 @@ axiosInstance.interceptors.response.use(
         apiResponse.failureResponse.message = data.message;
       }
     }
-    if(apiResponse.statusCode === 401){
+    if(apiResponse.statusCode === 401 && (apiResponse.failureResponse.error_code !== "INVALID_CREDENTIALS")){
       logOutUser();
       window.location.href = "/home";
     }
@@ -237,6 +254,12 @@ export const deleteImageFromCategory = async(animal_id, category_id) => {
 
 export const deleteCategory = async(animal_id, category_id) => {
   return await axiosInstance.delete(domain + `/animal/${animal_id}/category/${category_id}`).then(response => {
+    return response;
+  })
+}
+
+export const getAllAvailableProductsForVariation = async(animal_id, category_id, variant_type) => {
+  return await axiosInstance.get(domain + "/animal/" + animal_id + "/category/" + category_id + "/product/variation/list",{params:{variant_type: variant_type}}).then(response => {
     return response;
   })
 }

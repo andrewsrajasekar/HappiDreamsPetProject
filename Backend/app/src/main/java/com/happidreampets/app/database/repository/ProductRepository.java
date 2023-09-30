@@ -22,7 +22,7 @@ public interface ProductRepository extends CrudRepository<Product, Long> {
 
        Product findByIdAndToBeDeletedIsFalse(long id);
 
-       Product findByIdAndCategory(Long id, Category category);
+       Product findByIdAndCategoryAndToBeDeletedIsFalse(Long id, Category category);
 
        Page<Product> findAllByToBeDeletedIsFalseAndIsVisibleIsTrue(Pageable pageable);
 
@@ -68,12 +68,34 @@ public interface ProductRepository extends CrudRepository<Product, Long> {
        Product findProductForUIByCategory(@Param("id") Long id, @Param("category") Category category,
                      @Param("skipVisibility") boolean skipVisibility);
 
-       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name, p.description, p.details, p.richtextDetails, CASE WHEN p.color <> null THEN p.color ELSE null END, CASE WHEN p.size <> null THEN p.size ELSE null END, CASE WHEN p.weightUnits <> com.happidreampets.app.database.model.Product$WEIGHT_UNITS.NONE THEN p.weightUnits ELSE null END, CASE WHEN p.weight > 0 THEN p.weight ELSE null END, p.stocks, p.price, p.category, p.thumbnailImageUrl, p.variantSizeId, p.variantColorId, p.variantWeightId. p.isVisible ) "
-                     +
+       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name )" +
                      "FROM Product p " +
-                     "WHERE p.id = :id " +
+                     "WHERE p.id NOT IN (SELECT w.product.id FROM WeightVariant w) " +
+                     "AND p.weight <> null " +
+                     "AND p.weightUnits <> null " +
                      "AND p.category = :category " +
-                     "AND p.toBeDeleted = false ")
-       Product findProductVariantForUIByCategory(@Param("id") Long id, @Param("category") Category category);
+                     "AND p.toBeDeleted = false " +
+                     "AND (:skipVisibility = true OR p.isVisible = true)")
+       List<Product> findProductsNotInWeightVariant(@Param("category") Category category,
+                     @Param("skipVisibility") boolean skipVisibility);
 
+       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name )" +
+                     "FROM Product p " +
+                     "WHERE p.id NOT IN (SELECT s.product.id FROM SizeVariant s) " +
+                     "AND p.size <> null " +
+                     "AND p.category = :category " +
+                     "AND p.toBeDeleted = false " +
+                     "AND (:skipVisibility = true OR p.isVisible = true)")
+       List<Product> findProductsNotInSizeVariant(@Param("category") Category category,
+                     @Param("skipVisibility") boolean skipVisibility);
+
+       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name )" +
+                     "FROM Product p " +
+                     "WHERE p.id NOT IN (SELECT c.product.id FROM ColorVariant c) " +
+                     "AND p.color <> null " +
+                     "AND p.category = :category " +
+                     "AND p.toBeDeleted = false " +
+                     "AND (:skipVisibility = true OR p.isVisible = true)")
+       List<Product> findProductsNotInColorVariant(@Param("category") Category category,
+                     @Param("skipVisibility") boolean skipVisibility);
 }

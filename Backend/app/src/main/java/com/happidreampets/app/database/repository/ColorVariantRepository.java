@@ -2,7 +2,6 @@ package com.happidreampets.app.database.repository;
 
 import java.util.List;
 
-import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
@@ -27,7 +26,7 @@ public interface ColorVariantRepository extends CrudRepository<ColorVariant, Lon
 
     ColorVariant findById(long id);
 
-    Page<ColorVariant> findAllByVariantId(Long variantId);
+    List<ColorVariant> findAllByVariantId(Long variantId);
 
     @Query("SELECT MAX(cv.variantId) FROM ColorVariant cv")
     Long findMaxVariantId();

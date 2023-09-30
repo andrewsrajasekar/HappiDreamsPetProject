@@ -32,6 +32,7 @@ import { getTopCategories } from './services/ApiClient.jsx';
 import { isUserLoggedIn } from './services/SessionDetails.jsx';
 import { addKeyInActions, getKeyInActions } from './services/AfterReloadActions.jsx';
 import UINotification from './components/UINotification.jsx';
+import Variation from './components/Variation.jsx';
 
 function App() {
   window.onbeforeunload = function () {
@@ -223,6 +224,13 @@ function App() {
             path="/aboutus"
             element={
               <AboutUs />
+            }
+          />
+          
+          <Route
+            path="/variation"
+            element={
+              <Variation />
             }
           />
           <Route
