@@ -25,6 +25,11 @@ public interface SizeVariantRepository extends CrudRepository<SizeVariant, Long>
 
     List<SizeVariant> findAllByVariantId(Long variantId);
 
+    @Query("SELECT s FROM SizeVariant s WHERE s.variantId = :variantId AND s.product.id NOT IN :productIds")
+    List<SizeVariant> findAllByVariantIdAndNotInProductIds(
+            @Param("variantId") Long variantId,
+            @Param("productIds") List<Long> productIds);
+
     @Query("SELECT MAX(sv.variantId) FROM SizeVariant sv")
     Long findMaxVariantId();
 }

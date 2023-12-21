@@ -104,7 +104,21 @@
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
 
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+    	</dependency>
+
 	</dependencies>
+	<resources>
+    <resource>
+        <directory>src/main/resources</directory>
+    </resource>
+    <resource>
+        <directory>static</directory>
+        <targetPath>static</targetPath>
+    </resource>
+</resources>
 
 	<build>
 		<plugins>

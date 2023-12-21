@@ -16,6 +16,8 @@ import com.happidreampets.app.database.repository.SizeVariantRepository;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
 
+import jakarta.transaction.Transactional;
+
 @Component
 public class SizeVariantCRUD {
 
@@ -56,12 +58,22 @@ public class SizeVariantCRUD {
         return responseData;
     }
 
-    public JSONObject getSizeVariantDetails(Long variantId) {
+    public JSONObject getSizeVariantDetailsInJSONWithExcludeProductList(Long variantId, List<Long> excludedProductIds) {
         JSONObject sizeVariantData = new JSONObject();
-        List<SizeVariant> sizeVariantList = sizeVariantRepository.findAllByVariantId(variantId);
+        List<SizeVariant> sizeVariantList = sizeVariantRepository.findAllByVariantIdAndNotInProductIds(variantId,
+                excludedProductIds);
         sizeVariantData.put(ProductConstants.LowerCase.DATA,
                 getDataInRequiredFormat(sizeVariantList).get(ProductConstants.LowerCase.DATA));
         return sizeVariantData;
+    }
+
+    public List<SizeVariant> getSizeVariantDetailsWithExcludeProductList(Long variantId,
+            List<Long> excludedProductIds) {
+        return sizeVariantRepository.findAllByVariantIdAndNotInProductIds(variantId, excludedProductIds);
+    }
+
+    public List<SizeVariant> getSizeVariantDetails(Long variantId) {
+        return sizeVariantRepository.findAllByVariantId(variantId);
     }
 
     public SizeVariant createSizeVariant(Product product, Long variantId) throws Exception {
@@ -84,12 +96,14 @@ public class SizeVariantCRUD {
         }
         SizeVariant sizeVariant = new SizeVariant();
         sizeVariant.setProduct(product);
-        sizeVariant.setVariantId(sizeVariantRepository.findMaxVariantId() + 1);
+        sizeVariant.setVariantId(
+                (sizeVariantRepository.findMaxVariantId() == null ? 0 : sizeVariantRepository.findMaxVariantId()) + 1);
         sizeVariant.setAddedTime(System.currentTimeMillis());
 
         return sizeVariantRepository.save(sizeVariant);
     }
 
+    @Transactional
     public Boolean deleteSizeVariant(Product product, Long variantId) throws Exception {
         SizeVariant existingSizeVariant = sizeVariantRepository.findByProductAndVariantId(product, variantId);
         if (existingSizeVariant == null) {

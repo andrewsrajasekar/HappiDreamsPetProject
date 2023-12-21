@@ -29,6 +29,7 @@ public class ControllerConstants {
         public static final String EXPIRED_AUTHENTICATION_TOKEN = "expired_authentication_token";
         public static final String INVALID_CREDENTIALS = "invalid_credentials";
         public static final String NEW_AUTHENTICATION_TOKEN = "new_authentication_token";
+        public static final String ALLOWED_VALUES = "allowed_values";
     }
 
     public class CapitalizationCase {

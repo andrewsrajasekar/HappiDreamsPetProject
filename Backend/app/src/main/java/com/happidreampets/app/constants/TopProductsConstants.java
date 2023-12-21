@@ -20,6 +20,7 @@ public class TopProductsConstants {
     public class SnakeCase {
         public static final String ORDER_NUMBER = "order_number";
         public static final String TOP_PRODUCT_ID = "top_product_id";
+        public static final String TOP_PRODUCTS = "top_products";
     }
 
     public class CapitalizationCase {

@@ -4,6 +4,8 @@ import ReactTooltip from 'react-tooltip'
 import Modal from "../../Modal";
 import HomeCategoryAddPopUp from "./HomeCategoryAddPopUp";
 import Sorter from "../Sorter";
+import { addTopCategory, deleteTopCategory, getTopCategories, getTopCategory } from "../../../services/ApiClient";
+import UINotification from "../../UINotification";
 
 function HomeCategory(){
 
@@ -21,76 +23,92 @@ function HomeCategory(){
     const [editAnimalType, setEditAnimalType] = useState(null);
     const [editMode, setEditMode] = useState(false);
     
-    useEffect(() => {
-       setCategorySampleProducts([
-            {
-              "id":1, "categoryName": "Dummy Category 1", "animalType": "Dog", "products":
-                [
-                  {
-                    "id": 1,
-                    "name": "Dummy Product 1_1",
-                    "description": "Dummy Description 1_1",
-                    "image_url": "https://dummyimage.com/1203x503"
-                  },
-                  {
-                    "id": 2,
-                    "name": "Dummy Product 1_2",
-                    "description": "Dummy Description 1_2",
-                    "image_url": "https://dummyimage.com/1203x503"
-                  },
-                  {
-                    "id": 3,
-                    "name": "Dummy Product 1_3",
-                    "description": "Dummy Description 1_3",
-                    "image_url": "https://dummyimage.com/1203x503"
-                  }
-                  ,
-                  {
-                    "id": 6,
-                    "name": "Dummy Product 1_4",
-                    "description": "Dummy Description 1_4",
-                    "image_url": "https://dummyimage.com/1203x503"
-                  }
-                ]
-            },
-            {
-                "id":2, "categoryName": "Dummy Category 2", "animalType": "Cat", "products":
-                [
-                  {
-                    "id": 4,
-                    "name": "Dummy Product 2_1",
-                    "description": "Dummy Description 2_1",
-                    "image_url": "https://dummyimage.com/1203x503"
-                  },
-                  {
-                    "id": 5,
-                    "name": "Dummy Product 2_2",
-                    "description": "Dummy Description 2_2",
-                    "image_url": "https://dummyimage.com/1203x503"
-                  }
-                ]
-            },
-            {
-                "id":3, "categoryName": "Dummy Category 3", "animalType": "Fish", "products":
-                [
-                  {
-                    "id": 7,
-                    "name": "Dummy Product 3_1",
-                    "description": "Dummy Description 3_1",
-                    "image_url": "https://dummyimage.com/1203x503"
-                  },
-                  {
-                    "id": 8,
-                    "name": "Dummy Product 3_2",
-                    "description": "Dummy Description 3_2",
-                    "image_url": "https://dummyimage.com/1203x503"
-                  }
-                ]
-            }
-          ]);
+    // useEffect(() => {
+    //    setCategorySampleProducts([
+    //         {
+    //           "id":1, "categoryName": "Dummy Category 1", "animalType": "Dog", "products":
+    //             [
+    //               {
+    //                 "id": 1,
+    //                 "name": "Dummy Product 1_1",
+    //                 "description": "Dummy Description 1_1",
+    //                 "image_url": "https://dummyimage.com/1203x503"
+    //               },
+    //               {
+    //                 "id": 2,
+    //                 "name": "Dummy Product 1_2",
+    //                 "description": "Dummy Description 1_2",
+    //                 "image_url": "https://dummyimage.com/1203x503"
+    //               },
+    //               {
+    //                 "id": 3,
+    //                 "name": "Dummy Product 1_3",
+    //                 "description": "Dummy Description 1_3",
+    //                 "image_url": "https://dummyimage.com/1203x503"
+    //               }
+    //               ,
+    //               {
+    //                 "id": 6,
+    //                 "name": "Dummy Product 1_4",
+    //                 "description": "Dummy Description 1_4",
+    //                 "image_url": "https://dummyimage.com/1203x503"
+    //               }
+    //             ]
+    //         },
+    //         {
+    //             "id":2, "categoryName": "Dummy Category 2", "animalType": "Cat", "products":
+    //             [
+    //               {
+    //                 "id": 4,
+    //                 "name": "Dummy Product 2_1",
+    //                 "description": "Dummy Description 2_1",
+    //                 "image_url": "https://dummyimage.com/1203x503"
+    //               },
+    //               {
+    //                 "id": 5,
+    //                 "name": "Dummy Product 2_2",
+    //                 "description": "Dummy Description 2_2",
+    //                 "image_url": "https://dummyimage.com/1203x503"
+    //               }
+    //             ]
+    //         },
+    //         {
+    //             "id":3, "categoryName": "Dummy Category 3", "animalType": "Fish", "products":
+    //             [
+    //               {
+    //                 "id": 7,
+    //                 "name": "Dummy Product 3_1",
+    //                 "description": "Dummy Description 3_1",
+    //                 "image_url": "https://dummyimage.com/1203x503"
+    //               },
+    //               {
+    //                 "id": 8,
+    //                 "name": "Dummy Product 3_2",
+    //                 "description": "Dummy Description 3_2",
+    //                 "image_url": "https://dummyimage.com/1203x503"
+    //               }
+    //             ]
+    //         }
+    //       ]);
     
+    // }, [])
+    const fetchTopCategories = async () => {
+      const response = await getTopCategories();
+        if(response.isSuccess){
+          if(Array.isArray(response.successResponse.data.data) && response.successResponse.data.data.length > 0){
+            setCategorySampleProducts(response.successResponse.data.data);
+          }else{
+            setCategorySampleProducts([]);
+          }
+        }else{
+          UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+        }
+    };
+    
+    useEffect(() => {
+      fetchTopCategories();    
     }, [])
-
+    
     useEffect(() => {
         if(showAddModal){
             document.body.classList.toggle("overflow-hidden");
@@ -103,7 +121,7 @@ function HomeCategory(){
       let categoriesArray = [];
       categorySampleProducts.map((data) => {
         let dummyObj = {...data};
-        dummyObj.label = data.animalType + " - " + data.categoryName;
+        dummyObj.label = data.category.animal.name + " - " + data.category.name;
         categoriesArray.push(dummyObj);
       })
       setCategories(categoriesArray);
@@ -122,13 +140,13 @@ function HomeCategory(){
       let categoryAnimalType = {};
       categorySampleProducts.map((data,index) => {
         let categories = [];
-        if(categoryAnimalType.hasOwnProperty(data.animalType)){
-          categories = categoryAnimalType[data.animalType];
+        if(categoryAnimalType.hasOwnProperty(data.category.animal.id)){
+          categories = categoryAnimalType[data.category.animal.id];
         }
-        if(!categories.includes(data.categoryName)){
-          categories.push(data.categoryName);
+        if(!categories.includes(data.category.id)){
+          categories.push(data.category.id);
         }
-        categoryAnimalType[data.animalType] = categories;
+        categoryAnimalType[data.category.animal.id] = categories;
       })
       setAnimalTypeCategories(categoryAnimalType);
       setShowAddModal(true);
@@ -158,52 +176,54 @@ function HomeCategory(){
       closeCategorySortModal();
     }
 
-    const onSaveOfProducts = (selectedProductsFromModal, selectedAnimalTypeFromModal, selectedCategoryFromModal) => {
-      //dummy id
-      let id = categorySampleProducts.length + 1;
-      //dummymanipulate
-      selectedProductsFromModal = selectedProductsFromModal.map((data) => {
-        return{
-        ...data,
-        image_url: data.image
-      };
+    const onSaveOfProducts = async (selectedProductsFromModal, selectedAnimalTypeFromModal, selectedCategoryFromModal) => {
+      let productIds = [];
+      selectedProductsFromModal.forEach((product) => {
+        productIds.push(product.id);
       })
-      console.log(selectedProductsFromModal);
-      let array = [...categorySampleProducts];
-      array.push({id: id, categoryName: selectedCategoryFromModal.label, animalType: selectedAnimalTypeFromModal.label, products: selectedProductsFromModal});
-      setCategorySampleProducts(array);
+
+      console.log(productIds);
+      let addTopCategoryResponse = await addTopCategory(selectedAnimalTypeFromModal.id, selectedCategoryFromModal.id, productIds);
+      if(addTopCategoryResponse.isSuccess){
+        await fetchTopCategories();
+      }else{
+        UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+      }
       closeAddModal();
     }
 
-    const onEditOfProducts = (selectedProductsFromModal, selectedAnimalTypeFromModal, selectedCategoryFromModal) => {
-      //dummymanipulate
-      selectedProductsFromModal = selectedProductsFromModal.map((data) => {
-        return{
-        ...data,
-        image_url: data.hasOwnProperty("image_url") ? data.image_url : data.image
-      };
-      })
-      console.log(selectedProductsFromModal);
-      let array = [...categorySampleProducts];
-      array =  array.map((data) => {
-        if(data.animalType === selectedAnimalTypeFromModal.label && data.categoryName === selectedCategoryFromModal.label){
-          data.products = selectedProductsFromModal;
-        }
-        return data;
-      })
-      setCategorySampleProducts(array);
-      closeAddModal();
+  const onEditOfProducts = async (selectedProductsFromModal, selectedAnimalTypeFromModal, selectedCategoryFromModal) => {
+    let response = await deleteTopCategory(selectedCategoryFromModal.id);
+    if (!response.isSuccess) {
+      UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+      return;
     }
 
-    const deleteSection = (id, animalType, categoryName) => {
-      let dataArray = [...categorySampleProducts];
-      dataArray = dataArray.filter((data) => {
-        return !(data.id === id && data.animalType === animalType && data.categoryName === categoryName);
-      });
-      setCategorySampleProducts(dataArray);
+    let productIds = selectedProductsFromModal.map((product) => product.id);
+
+    let addTopCategoryResponse = await addTopCategory(selectedAnimalTypeFromModal.id, selectedCategoryFromModal.id, productIds);
+    if (addTopCategoryResponse.isSuccess) {
+      await fetchTopCategories();
+    } else {
+      UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+    }
+    closeAddModal();
+  }
+
+    const deleteSection = async (products, animal, category) => {
+      let response = await deleteTopCategory(category.id);
+      if (!response.isSuccess) {
+        UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+        return;
+      }else{
+        await fetchTopCategories();
+      }
     }
 
     const editSection = (products, animalType, categoryName) => {
+      products.forEach((product) => {
+        product.category = categoryName;
+      })
       setAlreadySelectedProductsForCategory(products);
       setEditMode(true);
       setEditAnimalType(animalType);
@@ -212,7 +232,6 @@ function HomeCategory(){
     }
 
     const sortOrder = () => {
-      console.log("Dudd");
       openCategorySortModel();
     }
 
@@ -265,7 +284,7 @@ function HomeCategory(){
         {showAddModal && (
 
 <Modal
-  content={<HomeCategoryAddPopUp editMode={editMode} animalType={editAnimalType} category={editCategory} alreadySelectedProductsForCategory={alreadySelectedProductsForCategory} existingAnimalTypeCategories={animalTypeCategories} onSaveOfProducts={editMode ? onEditOfProducts : onSaveOfProducts} />}
+  content={<HomeCategoryAddPopUp editMode={editMode} editAnimal={editAnimalType} editCategory={editCategory} alreadySelectedProductsForCategory={alreadySelectedProductsForCategory} existingAnimalTypeCategories={animalTypeCategories} onSaveOfProducts={editMode ? onEditOfProducts : onSaveOfProducts} />}
   onClose={closeAddModal}
   width={`${widthOfPopUp}%`}
   height={`${heightOfPopUp}%`}

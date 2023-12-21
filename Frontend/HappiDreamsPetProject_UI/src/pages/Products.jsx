@@ -562,10 +562,10 @@ function Products({hideSortVisibility, maxCheckedForCheckBox, category_info_from
         </div>
         </>}
         {variationModalIsOpen && (
-        <Modal closeOnOverlayClick={false} open={variationModalIsOpen} onClose={() => setVariationModalIsOpen(false)} center blockScroll={true} closeIconId={"variationModalClose"}  styles={{modal: {width: '50%'}}}>
+        <Modal closeOnOverlayClick={false} open={variationModalIsOpen} onClose={() => setVariationModalIsOpen(false)} center blockScroll={true} closeIconId={"variationModalClose"}  styles={{modal: {width: '60%'}}}>
       <div onClick={(event) => event.stopPropagation()}>
         {/* <h1 className="text-xl font-bold mb-4 -mt-2">Variation Details</h1> */}
-          <div><Variation closeModal={() => {event.stopPropagation()}} animalId={animalInfo.id} categoryId={categoryInfo.id} productId={selectedProduct.id} productName={selectedProduct.name} /> </div>
+          <div><Variation closeModal={() => {event.stopPropagation()}} animalId={animalInfo.id} categoryId={categoryInfo.id} productId={selectedProduct.id} productName={selectedProduct.name} isSizeDataPresent={selectedProduct.hasOwnProperty("size")} isColorDataPresent={selectedProduct.hasOwnProperty("color")} isWeightDataPresent={selectedProduct.hasOwnProperty("weightUnits") && selectedProduct.hasOwnProperty("weight")} /> </div>
       </div>
       </Modal>
       )}

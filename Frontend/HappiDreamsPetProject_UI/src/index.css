@@ -164,3 +164,34 @@ label#rupee {
   justify-content: center;
   margin-top: 2px;
 }
+.min-height-400px{
+  min-height: 400px;
+}
+/* Custom CSS class to limit the dropdown's max height */
+.custom-dropdown-menu {
+  max-height: 200px; /* Adjust this value as needed to reduce the height */
+  overflow-y: auto; /* Enable vertical scrolling if necessary */
+}
+
+ul.variantUl {
+  display: flex;
+  justify-content: space-between;
+}
+
+li.variantLi {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+ul.variantUl > li {
+  /* flex-basis: calc(33.33% - 16px);  */
+  /* Adjust as needed based on your grid setup */
+  margin-right: 16px; /* Adjust as needed based on your grid setup */
+}
+
+.flex.variantDiv {
+  /* flex-direction: column;
+  align-items: center; */
+  margin-top: auto;
+}

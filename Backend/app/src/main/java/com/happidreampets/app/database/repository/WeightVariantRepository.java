@@ -25,6 +25,11 @@ public interface WeightVariantRepository extends CrudRepository<WeightVariant, L
 
     List<WeightVariant> findAllByVariantId(Long variantId);
 
+    @Query("SELECT w FROM WeightVariant w WHERE w.variantId = :variantId AND w.product.id NOT IN :productIds")
+    List<WeightVariant> findAllByVariantIdAndNotInProductIds(
+            @Param("variantId") Long variantId,
+            @Param("productIds") List<Long> productIds);
+
     @Query("SELECT MAX(wv.variantId) FROM WeightVariant wv")
     Long findMaxVariantId();
 }

@@ -40,6 +40,9 @@ public class CategoryCRUD {
     @Autowired
     private CategoryRepository categoryRepository;
 
+    @Autowired
+    private AnimalCRUD animalCRUD;
+
     private DbFilter dbFilter;
 
     public static final String CATEGORY_IMAGE_LOCATION_FULL = System
@@ -138,8 +141,16 @@ public class CategoryCRUD {
         return categoryData;
     }
 
+    public Category getCategoryDetail(Long animalId, Long categoryId) {
+        return categoryRepository.findByAnimalAndIdAndToBeDeletedIsFalse(animalCRUD.getAnimal(animalId), categoryId);
+    }
+
     public Category getCategoryDetail(Animal animal, Long id) {
         return categoryRepository.findByAnimalAndIdAndToBeDeletedIsFalse(animal, id);
+    }
+
+    public Category getCategoryDetailBasedOnId(Long id) {
+        return categoryRepository.findByIdAndToBeDeletedIsFalse(id);
     }
 
     public Category createCategory(String name, String description, Animal animal) throws Exception {

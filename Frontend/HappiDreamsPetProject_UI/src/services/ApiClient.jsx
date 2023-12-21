@@ -114,10 +114,39 @@ export const getTopProducts = async () => {
       })
 }
 
+export const clearAndAddTopProductsInBulk = async (products) => {
+  return await axiosInstance.post(domain + "/top-products", products).then(response => {
+      return response;
+    })
+}
+
+
 export const getTopCategories = async () => {
     return await axiosInstance.get(domain + "/top-categories").then(response => {
         return response;
       })
+}
+
+export const getTopCategory = async (category_id) => {
+  return await axiosInstance.get(domain + `/top-category/${category_id}`).then(response => {
+      return response;
+    })
+}
+
+export const addTopCategory = async (animal_id, category_id, products) => {
+  let body = {};
+  body.animal_id = animal_id;
+  body.category_id = category_id;
+  body.products = products;
+  return await axiosInstance.post(domain + "/top-category", body).then(response => {
+      return response;
+    })
+}
+
+export const deleteTopCategory = async (category_id) => {
+  return await axiosInstance.delete(domain + "/top-category/" +category_id).then(response => {
+      return response;
+    })
 }
 
 export const getAllAnimals = async () => {
@@ -284,7 +313,7 @@ export const createProductVariation = async(animal_id, category_id, product_id, 
 export const deleteProductVariation = async(animal_id, category_id, product_id, variant_type) => {
   let body = {};
   body.variant_type = variant_type;
-  return await axiosInstance.delete(domain + "/animal/" + animal_id + "/category/" + category_id + "/product/" + product_id + "/variation", body).then(response => {
+  return await axiosInstance.delete(domain + "/animal/" + animal_id + "/category/" + category_id + "/product/" + product_id + "/variation", { data: body }).then(response => {
     return response;
   })
 }
@@ -534,3 +563,28 @@ export const selectDefaultAddress = async(address_id) => {
       return response;
     })
 }
+
+export const getPromotions = async() => {
+  return await axiosInstance.get(domain + "/promotions").then(response => {
+    return response;
+  })
+}
+
+export const addPromotions = async(file) => {
+  const formData = new FormData();
+  formData.append('promotionImage', file);
+  return await axiosInstance.post(domain + "/promotions", formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }).then(response => {
+    return response;
+  })
+}
+
+export const deletePromotion = async(id) => {
+  return await axiosInstance.delete(domain + "/promotion/"+id).then(response => {
+    return response;
+  })
+}
+

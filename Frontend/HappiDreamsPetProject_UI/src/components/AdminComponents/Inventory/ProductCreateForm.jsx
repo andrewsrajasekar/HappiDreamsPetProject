@@ -48,10 +48,6 @@ function ProductCreateForm({ selectedAnimal, selectedCategory, editMode, product
   const [deletedImagesInEdit, setDeletedImagesInEdit] = useState([]);
   const maxImages = 5;
 
-  // useEffect(() => {
-  //   debugger;
-  // }, [isProductColorEnabled, isProductColorEnabled_Edit])
-
   const getLengthOfSelectedText = () => {
     const currentSelection = productDetailsEditor.getSelection();
     const isCollapsed = currentSelection.isCollapsed();
@@ -365,7 +361,7 @@ function ProductCreateForm({ selectedAnimal, selectedCategory, editMode, product
       productInfo.size = productSize;
     }
     if (isProductWeightEnabled) {
-      productInfo.weightUnits = productWeightUnits;
+      productInfo.weightUnits = productWeightUnits.label.toLowerCase();
       productInfo.weight = Number(productWeight);
     }
     if (isEditComponent) {

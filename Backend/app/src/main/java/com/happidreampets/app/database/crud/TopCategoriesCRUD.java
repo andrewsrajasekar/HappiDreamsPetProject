@@ -5,17 +5,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.lang3.EnumUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
+import com.happidreampets.app.constants.AnimalConstants;
 import com.happidreampets.app.constants.CartConstants;
 import com.happidreampets.app.constants.CategoryConstants;
 import com.happidreampets.app.constants.ControllerConstants;
@@ -28,10 +24,11 @@ import com.happidreampets.app.controller.APIController.ERROR_CODES;
 import com.happidreampets.app.database.model.Category;
 import com.happidreampets.app.database.model.Product;
 import com.happidreampets.app.database.model.TopCategories;
-import com.happidreampets.app.database.model.TopCategories.TOPCATEGORIESCOLUMN;
 import com.happidreampets.app.database.repository.TopCategoriesRepository;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
+
+import jakarta.transaction.Transactional;
 
 @Component
 public class TopCategoriesCRUD {
@@ -68,16 +65,6 @@ public class TopCategoriesCRUD {
         this.dbFilter = dbFilter;
     }
 
-    private TOPCATEGORIESCOLUMN checkAndGetColumnName() {
-        if (dbFilter != null) {
-            if (EnumUtils.isValidEnum(TOPCATEGORIESCOLUMN.class, dbFilter.getSortColumn().toString())) {
-                TOPCATEGORIESCOLUMN enumValue = TOPCATEGORIESCOLUMN.valueOf(dbFilter.getSortColumn().toString());
-                return enumValue;
-            }
-        }
-        return null;
-    }
-
     private JSONObject getDataInRequiredFormat(Iterable<TopCategories> data) {
         JSONObject responseData = new JSONObject();
         responseData.put(ProductConstants.LowerCase.DATA, JSONObject.NULL);
@@ -96,33 +83,9 @@ public class TopCategoriesCRUD {
         return responseData;
     }
 
-    private JSONObject getPageData(Page<TopCategories> topCategoriesPage) {
-        JSONObject pageData = new JSONObject();
-        pageData.put(ProductConstants.LowerCase.PAGE, topCategoriesPage.getNumber() + 1);
-        pageData.put(ProductConstants.SnakeCase.PER_PAGE, topCategoriesPage.getSize());
-        pageData.put(ProductConstants.LowerCase.COUNT, topCategoriesPage.getContent().size());
-        pageData.put(ProductConstants.SnakeCase.MORE_RECORDS, topCategoriesPage.hasNext());
-        return pageData;
-    }
-
     public JSONObject getTopCategoriesDetails() {
         JSONObject topCategoriesData = new JSONObject();
-        Sort sort = null;
-        Iterable<TopCategories> topCategoriesIterable = null;
-        if (getDbFilter() != null) {
-            if (checkAndGetColumnName() != null) {
-                sort = Sort.by(getDbFilter().getSortDirection(), checkAndGetColumnName().getColumnName());
-            }
-            Integer startIndex = getDbFilter() != null ? getDbFilter().getStartIndex() : 0;
-            Integer limit = getDbFilter() != null ? getDbFilter().getLimitIndex() : 0;
-            Pageable pageable = sort != null ? PageRequest.of(startIndex, limit, sort)
-                    : PageRequest.of(startIndex, limit);
-            Page<TopCategories> topCategoriesPage = topCategoriesRepository.findAll(pageable);
-            topCategoriesIterable = topCategoriesPage.getContent();
-            topCategoriesData.put(ProductConstants.LowerCase.INFO, getPageData(topCategoriesPage));
-        } else {
-            topCategoriesIterable = topCategoriesRepository.findAll();
-        }
+        Iterable<TopCategories> topCategoriesIterable = topCategoriesRepository.findAll();
         topCategoriesData.put(ProductConstants.LowerCase.DATA,
                 getDataInRequiredFormat(topCategoriesIterable).get(ProductConstants.LowerCase.DATA));
         return topCategoriesData;
@@ -169,13 +132,14 @@ public class TopCategoriesCRUD {
         JSONObject categoryIdVsProducts = new JSONObject();
         for (TopCategories topCategory : data) {
             if (!categoryIdVsCategory.has(topCategory.getCategory().getId().toString())) {
-                categoryIdVsCategory.put(topCategory.getCategory().getId().toString(), topCategory.getCategory());
+                categoryIdVsCategory.put(topCategory.getCategory().getId().toString(),
+                        topCategory.getCategory().toJSON(true, true));
             }
             JSONArray products = new JSONArray();
             if (categoryIdVsProducts.has(topCategory.getCategory().getId().toString())) {
                 products = categoryIdVsProducts.getJSONArray(topCategory.getCategory().getId().toString());
             }
-            products.put(topCategory.getProduct());
+            products.put(topCategory.getProduct().toJSON(true, true));
             categoryIdVsProducts.put(topCategory.getCategory().getId().toString(), products);
         }
         for (String categoryId : categoryIdVsProducts.keySet()) {
@@ -201,7 +165,7 @@ public class TopCategoriesCRUD {
                                 + TopCategoriesConstants.MessageCase.CATEGORIES_EXISTING_IN_TOPCATEGORIES_WHICH_IS_MAXIMUM);
             }
         }
-        if (existingCategoryProductsData.size() + productIds.size() >= topCategoriesProductsLimit) {
+        if (existingCategoryProductsData.size() + productIds.size() > topCategoriesProductsLimit) {
             throw new Exception(getFromController()
                     ? MessageCase.PRODUCTS_IN_GIVEN_CATEGORY_IN_TOPCATEGORIES_WHICH_WILL_BE_EXCEEDED
                     : TopCategoriesConstants.MessageCase.MAXIMUM_OF
@@ -245,6 +209,11 @@ public class TopCategoriesCRUD {
             result.add(data);
         }
         return result;
+    }
+
+    public TopCategories singleCreateForCategory(Category category, Long productId)
+            throws Exception {
+        return createTopCategoryProduct(category, productCRUD.getProduct(productId), -1);
     }
 
     public TopCategories createTopCategoryProduct(Category category, Product product, Integer orderNumber)
@@ -370,6 +339,7 @@ public class TopCategoriesCRUD {
         return topCategoriesList;
     }
 
+    @Transactional
     public Boolean deleteTopCategoryBasedOnCategory(Category category) throws Exception {
         List<TopCategories> existingCategoryProductsData = topCategoriesRepository
                 .findAllSortedCategoryDataWithOrderNumberAsc(category);
@@ -395,7 +365,10 @@ public class TopCategoriesCRUD {
         String missingField = ProductConstants.LowerCase.EMPTY_QUOTES;
         String message = ProductConstants.MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
         String code = ERROR_CODES.MANDATORY_MISSING.name();
-        if (!body.has(CategoryConstants.SnakeCase.CATEGORY_ID)) {
+        if (!body.has(AnimalConstants.SnakeCase.ANIMAL_ID)) {
+            missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+            message = message.replace(ProductConstants.LoggerCase.ARG0, AnimalConstants.SnakeCase.ANIMAL_ID);
+        } else if (!body.has(CategoryConstants.SnakeCase.CATEGORY_ID)) {
             missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
             message = message.replace(ProductConstants.LoggerCase.ARG0, CategoryConstants.SnakeCase.CATEGORY_ID);
         } else if (!body.has(ProductConstants.LowerCase.PRODUCTS)) {
@@ -407,7 +380,21 @@ public class TopCategoriesCRUD {
                 List<?> productList = (List<?>) body.get(ProductConstants.LowerCase.PRODUCTS);
                 int index = 1;
                 for (Object item : productList) {
-                    if (!(item instanceof Long)) {
+                    if (!(item instanceof Long || item instanceof Integer)) {
+                        code = null;
+                        message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                        message += " in the Position " + index + " of the products array";
+                        missingField = ProductConstants.LowerCase.PRODUCTS;
+                        isError = Boolean.TRUE;
+                        break;
+                    }
+                    index++;
+                }
+            } else if (body.get(ProductConstants.LowerCase.PRODUCTS) instanceof JSONArray) {
+                JSONArray productList = (JSONArray) body.get(ProductConstants.LowerCase.PRODUCTS);
+                int index = 1;
+                for (Object item : productList) {
+                    if (!(item instanceof Long || item instanceof Integer)) {
                         code = null;
                         message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
                         message += " in the Position " + index + " of the products array";
@@ -442,7 +429,14 @@ public class TopCategoriesCRUD {
         if (body.get(ProductConstants.LowerCase.PRODUCTS) instanceof List) {
             List<?> productList = (List<?>) body.get(ProductConstants.LowerCase.PRODUCTS);
             for (Object item : productList) {
-                if (item instanceof Long) {
+                if (item instanceof Long || item instanceof Integer) {
+                    productIds.add(Long.valueOf(item.toString()));
+                }
+            }
+        } else if (body.get(ProductConstants.LowerCase.PRODUCTS) instanceof JSONArray) {
+            JSONArray productList = (JSONArray) body.get(ProductConstants.LowerCase.PRODUCTS);
+            for (Object item : productList) {
+                if (item instanceof Long || item instanceof Integer) {
                     productIds.add(Long.valueOf(item.toString()));
                 }
             }

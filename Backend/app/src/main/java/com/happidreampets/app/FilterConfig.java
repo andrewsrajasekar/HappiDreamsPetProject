@@ -8,7 +8,9 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.DispatcherServlet;
 import org.springframework.web.servlet.HandlerMapping;
+import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
@@ -19,8 +21,14 @@ import com.happidreampets.app.pre_filters.LoggingFilter;
 import com.happidreampets.app.utils.URLData;
 
 @Configuration
+// @EnableWebMvc
 @ComponentScan("com.happidreampets.app.pre_filters")
 public class FilterConfig implements WebMvcConfigurer {
+
+    // @Override
+    // public void addResourceHandlers(ResourceHandlerRegistry registry) {
+    // registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/");
+    // }
 
     @Bean
     public FilterRegistrationBean<LoggingFilter> loggingFilter() {

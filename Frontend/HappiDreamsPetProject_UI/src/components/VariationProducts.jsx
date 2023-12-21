@@ -1,8 +1,7 @@
-import { EllipsisHorizontalIcon } from "@heroicons/react/24/solid";
 import { useEffect, useState } from "react";
 import ReactTooltip from "react-tooltip";
-function VariationProducts({variantProducts, keyItem, keyItemArrayId, maxVariantProducts, addVariant}){
-const [startIndex, setStartIndex] = useState(0);
+function VariationProducts({variantProducts, keyItem, keyItemArrayId, maxVariantProducts, addVariant, isVariantDetailsPresentInProduct, onRemove, onView}){
+  const [startIndex, setStartIndex] = useState(0);
 const handleNext = () => {
   if ((startIndex + 2) < (variantProducts.length - 1)) {
     setStartIndex(startIndex + 1);
@@ -20,24 +19,41 @@ useEffect(() => {
 }, [variantProducts.length])
 const visibleVariantProducts = variantProducts.slice(startIndex, startIndex + 3);
     return(
-        <div className="bg-white">
+        <div className="bg-white overflow-x-hidden">
           <div>
           <div className={`${variantProducts.length > 0 ? "mb-4" : "mb-2"}`}>
             <span>{keyItem} Variants</span>
-            {variantProducts.length < maxVariantProducts  && 
-                <button className="ml-2 text-xs text-green-500" onClick={addVariant ? addVariant : null}>+Add</button>
-            }
-            {variantProducts.length >= maxVariantProducts  && 
+            {isVariantDetailsPresentInProduct ? 
             <>
-             <span data-tip={`Only ${maxVariantProducts} Variant Products for ${keyItem} are allowed`} data-for="disabledButton" data-tip-disable={false}>
-
-             <button className="ml-2 text-xs text-green-500 disabled:opacity-25 disabled:cursor-not-allowed" disabled>+Add</button>
-
-             </span>
-             <ReactTooltip id="disabledButton" place="bottom" effect="solid" />
+            {variantProducts.length < maxVariantProducts  && 
+                  <button className="ml-2 text-xs text-green-500" onClick={addVariant ? addVariant : null}>+Add</button>
+              }
+              {variantProducts.length >= maxVariantProducts  && 
+              <>
+               <span data-tip={`Only ${maxVariantProducts} Variant Products for ${keyItem} are allowed`} data-for="disabledButton" data-tip-disable={false}>
+  
+               <button className="ml-2 text-xs text-green-500 disabled:opacity-25 disabled:cursor-not-allowed" disabled>+Add</button>
+  
+               </span>
+               <ReactTooltip id="disabledButton" place="bottom" effect="solid" />
+              </>
+                  
+              }
             </>
-                
+                 :
+              <>
+              <span data-tip={`${keyItem} Details are not present in the Product, hence ${keyItem} Variant cannot be added`} data-for="addDisabledButton" data-tip-disable={false}>
+  
+              <button className="ml-2 text-xs text-green-500 disabled:opacity-25 disabled:cursor-not-allowed" disabled>+Add</button>
+
+              </span>
+              <ReactTooltip id="addDisabledButton" place="bottom" effect="solid" />
+              </>
             }
+            {variantProducts.length > 0 &&
+                  <button className="ml-2 text-xs text-red-500" onClick={onRemove ? ()=>{onRemove(true, {}, keyItem)} : undefined}>Remove from Variation</button>
+              }
+        
             </div>
             <div className="">
           {variantProducts.length > 0 ? 
@@ -66,23 +82,28 @@ const visibleVariantProducts = variantProducts.slice(startIndex, startIndex + 3)
             <span className="sr-only">Prev</span>
           </button>
           </div>
-          <ul role="list" class="grid grid-cols-1 gap-x-6 gap-y-8 grid-cols-3 gap-x-8">
+          <ul role="list" class="grid variantUl grid-cols-1 gap-x-6 gap-y-8 grid-cols-3 gap-x-8">
               {visibleVariantProducts.map((product) => (
-                <li class="overflow-hidden rounded-xl border" id={`${keyItem}_variant_${product.id}`}>
-                <div class="flex items-center gap-x-4 border-b borderColorGrey bggrey p-6">
-                  <img src={product.thumbnailImageUrl} alt="Tuple" class="h-12 w-12 flex-none rounded-lg bg-white object-cover offsetShadow ring-gray-900/[.1]" />
-                  <div class="text-sm font-medium leading-6 text-gray-900">{product.name}</div>
+                <li class="overflow-hidden rounded-xl border variantLi" id={`${keyItem}_variant_${product.id}`}>
+                <div class="flex items-center justify-center border-b borderColorGrey bggrey">
+                  <img src={product.thumbnailImageUrl ? product.thumbnailImageUrl : "https://dummyimage.com/350x350"} alt="Tuple" class="h-fit w-fit flex-none rounded-lg bg-white object-cover offsetShadow ring-gray-900/[.1]" />
                 </div>
-                <dl class="-my-3 variationBorderSeperate variationBorder px-6 py-4 text-sm leading-6">
-                  <div class="flex justify-between gap-x-4 py-3">
-                    <dt class="text-gray-500">{keyItem}</dt>
+                <dl class="-my-3 variationBorderSeperate variationBorder px-4 py-4 text-sm leading-6">
+                <div class="flex justify-between gap-x-4 py-3 variantDiv">
+                    <dt class="text-gray-500 font-medium">Name</dt>
                     <dd class="text-gray-700">
-                      <time datetime="2022-12-13">{product[keyItemArrayId]}</time>
+                      <div className="text-sm leading-6 break-all flex">{product.name}</div>
                     </dd>
                   </div>
-                  <div class="flex justify-center gap-x-4 py-3">
-                    <dd class="text-indigo-500">View</dd>
-                    <dd class="text-red-500">Remove</dd>
+                  <div class="flex justify-between gap-x-4 py-3 variantDiv">
+                    <dt class="text-gray-500 font-medium">{keyItem}</dt>
+                    <dd class="text-gray-700">
+                      <div className="text-sm leading-6 break-all flex">{product[keyItemArrayId]}</div>
+                    </dd>
+                  </div>
+                  <div class="flex justify-center gap-x-4 py-3 variantDiv">
+                    <dd><button className="text-xs text-indigo-500" onClick={onView ? ()=>{onView(product, keyItem)} : undefined}>View</button></dd>
+                    <dd><button className="ml-2 text-xs text-red-500" onClick={onRemove ? ()=>{onRemove(false, product, keyItem)} : undefined}>Remove</button></dd>
                   </div>
                 </dl>
               </li>

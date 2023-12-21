@@ -121,7 +121,8 @@ public class OtherDataControllerInterceptor extends APIController implements Han
             }
             Long categoryId = Long.valueOf(categoryIdObj.toString());
 
-            category = getCategoryCRUD().getCategoryDetail(animal, categoryId);
+            category = isAnimalIdPresent ? getCategoryCRUD().getCategoryDetail(animal, categoryId)
+                    : getCategoryCRUD().getCategoryDetailBasedOnId(categoryId);
 
             if (isCategoryIdPresent && category == null) {
                 failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);

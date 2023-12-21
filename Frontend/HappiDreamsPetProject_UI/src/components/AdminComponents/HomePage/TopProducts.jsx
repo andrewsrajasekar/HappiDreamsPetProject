@@ -3,45 +3,76 @@ import ImageThumbnail from "../ImageThumbnail";
 import Products from "../../../pages/Products";
 import Loading from "../../Loading";
 import Select from "react-select";
+import { clearAndAddTopProductsInBulk, getAllAnimals, getAllCategories, getTopProducts } from "../../../services/ApiClient";
+import UINotification from "../../UINotification";
 
 function TopProducts() {
-  const [products, setProducts] = useState([
-    {"id": 1, "name" : "Dummy Product 1", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/600x600", "price": "\u20B91000"},
-    {"id": 2, "name" : "Dummy Product 2", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/600x600", "price": "\u20B92000"},
-    {"id": 3, "name" : "Dummy Product 3", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/600x600", "price": "\u20B92500"},
-    {"id": 4, "name" : "Dummy Product 4", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/600x600", "price": "\u20B9900"},
-    {"id": 5, "name" : "Dummy Product 5", "animalType": "Dog", "categoryName": "Dummy Category 2", "image": "https://dummyimage.com/600x600", "price": "\u20B9875"},
-    {"id": 6, "name" : "Dummy Product 6", "animalType": "Dog", "categoryName": "Dummy Category 1", "image": "https://dummyimage.com/600x600", "price": "\u20B9300"},
-    {"id": 7, "name" : "Dummy Product 7", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/600x600", "price": "\u20B9200"},
-    {"id": 8, "name" : "Dummy Product 8", "animalType": "Dog", "categoryName": "Dummy Category 3", "image": "https://dummyimage.com/600x600", "price": "\u20B91000"}
-  ]);
+  const [products, setProducts] = useState([]);
 
-  const [selectedAnimalType, setSelectedAnimalType] = useState({id: -1, label: "Select a Animal Type"});
-  const [selectedCategory, setSelectedCategory] = useState({id: -1, label: "Select a Category"});
+  const [selectedAnimalType, setSelectedAnimalType] = useState({id: -1, name: "Select a Animal Type"});
+  const [selectedCategory, setSelectedCategory] = useState({id: -1, name: "Select a Category"});
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isAnimalTypeDropdownOpen, setIsAnimalTypeDropdownOpen] = useState(false);
   const [checkBoxIdsArray, setCheckBoxIdsArray] = useState([]);
   const [isProductLoading, setIsProductLoading] = useState(false);
   const maximumProductsAdded = 8;
-  const animalOptions = [
-    { id: 1, label: 'Cat' },
-    { id: 2, label: 'Dog' },
-    { id: 3, label: 'Fish' }];
-  const categoryOptions = [
-    { id: 1, label: 'Dummy Category 1' },
-    { id: 2, label: 'Dummy Category 2' },
-    { id: 3, label: 'Dummy Category 3' }];
+  const [animals, setAnimals] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [isSaveButtonDisabled, setIsSaveButtonDisabled] = useState(true);
+  const [refreshComponent, setRefreshComponent] = useState(true);
 
+    const fetchTopProducts = async () => {
+      const response = await getTopProducts();
+      if(response.isSuccess && Array.isArray(response.successResponse.data.data)){
+        if(response.successResponse.data.data.length > 0){
+          setProducts(response.successResponse.data.data);
+        }else{
+          setProducts([]);
+        }
+      }else{
+        UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+      }
+  };
+
+  const fetchAnimals = async() => {
+    const allAnimalsData = await getAllAnimals();
+    if(allAnimalsData.isSuccess){
+      setAnimals(allAnimalsData.successResponse.data.data);
+    }else{
+      setAnimals([]);
+      UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+    }
+  }
+
+  const fetchCategory = async() => {
+    const allCategoriesData = await getAllCategories(selectedAnimalType.id);
+    if(allCategoriesData.isSuccess){
+      setCategories(allCategoriesData.successResponse.data.data);
+    }else{
+      UINotification({ message: "Issue Occured, while collecting Categories Data", type: "Error" });
+    }
+  }
 
   useEffect(() => {
-    // fetch products or initialize the state
-  }, []);
+    if(refreshComponent){
+      fetchTopProducts();
+      fetchAnimals();
+      setRefreshComponent(false);
+    }
+  }, [refreshComponent]);
+
+  useEffect(() => {
+    if(selectedAnimalType.id && selectedAnimalType.id > 0){
+      fetchCategory();
+    }
+  }, [selectedAnimalType]);
+
 
   const setCheckBoxDataFromProducts = () => {
     let checkBoxArray = [];
     products.map((product) => {
-      if(product.animalType === selectedAnimalType.label && product.categoryName === selectedCategory.label){
-        checkBoxArray.push(product.id);
+      if(product.product.category.animal.id === selectedAnimalType.id && product.product.category.id === selectedCategory.id){
+        checkBoxArray.push(product.product.id);
       }
     })
     setCheckBoxIdsArray(checkBoxArray);
@@ -56,17 +87,21 @@ function TopProducts() {
   }, [selectedAnimalType, selectedCategory, products]);
 
   const addProduct = (product) => {
-    let updatedProducts = Array.from(products);
-    const data = {animalType: selectedAnimalType.label, categoryName: selectedCategory.label};
-    updatedProducts.push({...product, ...data});
-    setProducts(updatedProducts);
+    setProducts(prevProducts => {
+      const updatedProducts = [...prevProducts];
+      const data = { category: selectedCategory };
+      const newProduct = { ...product, ...data };
+      let pushData = {};
+      pushData.product = newProduct;
+      updatedProducts.push(pushData);
+      return updatedProducts;
+    });
   }
 
   const removeProduct = (productData) => {
     setProducts(prevProducts => prevProducts.filter((product) => {
-      return !(product.id === productData.id && product.animalType === selectedAnimalType.label && product.categoryName === selectedCategory.label);
+      return !(product.product.id === productData.id && product.product.category.animal.id === selectedAnimalType.id && product.product.category.id === selectedCategory.id);
     }));
-    setIsProductLoading(true);
   }
 
   const handleCheckBox = (checkboxToggle, product) => {
@@ -75,6 +110,7 @@ function TopProducts() {
     }else{
       removeProduct(product);
     }
+    setIsSaveButtonDisabled(false);
   }
 
   const handleDragStart = (event, index) => {
@@ -84,15 +120,28 @@ function TopProducts() {
   const handleDeleteImage = (productId) => {
     setIsProductLoading(true);
     setProducts(products.filter((product) => product.id !== productId));
+    setIsSaveButtonDisabled(false);
   };
 
   const handleDragOver = (event) => {
     event.preventDefault();
   };
 
-  const handleSaveProgress = () => {
-    // Save progress logic here
-    console.log('Progress saved!');
+  const handleSaveProgress = async() => {
+    let apiProducts = products.map((product, index) => ({
+      animal_id: product.product.category.animal.id,
+      category_id: product.product.category.id,
+      product_id: product.product.id,
+      order_number: index + 1,
+    }));
+    const createTopProductsResponse = await clearAndAddTopProductsInBulk(apiProducts);
+    if(createTopProductsResponse.isSuccess){
+      setRefreshComponent(true);
+      UINotification({ message: "Saved Successfully", type: "Success" });
+      setIsSaveButtonDisabled(true);
+    }else{
+      UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+    }
   };
 
   const handleDrop = (event, newIndex) => {
@@ -116,13 +165,22 @@ function TopProducts() {
       })
   };
 
+  const getOptionLabel = (option) => {
+    if(option.hasOwnProperty("name")){
+      return option.name;
+    }else if(option.hasOwnProperty("label")){
+      return option.label;
+    }
+    return null;
+  }
+
   return (
     <div className="p-4 flex-grow">
       <h1 className="text-2xl font-bold mb-4 flex justify-center items-center">Top Products Customization</h1>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 mb-4">
         {products.map((product, index) => (
           <li
-            key={product.id}
+            key={product.product.id}
             draggable
             onDragStart={(event) => handleDragStart(event, index)}
             onDragOver={handleDragOver}
@@ -132,20 +190,20 @@ function TopProducts() {
             <span className="group block overflow-hidden cursor-move">
               <div className="flex items-center justify-center">
                 <ImageThumbnail
-                  image={{ url: product.image, name: product.name }}
+                  image={{ url: product.product.thumbnailImageUrl ? product.product.thumbnailImageUrl : "https://dummyimage.com/350x350", name: product.product.name }}
                   showName={false}
                 />
               </div>
 
               <div className="relative bg-white pt-3">
               <h3 className="text-xs text-gray-700 flex items-center justify-center">
-                  {product.animalType} - {product.categoryName}
+                  {product.product.category.animal.name} - {product.product.category.name}
                 </h3>
                 <h3 className="text-xs text-gray-700 flex items-center justify-center">
-                  {product.name}
+                  {product.product.name}
                 </h3>
                 <span className="text-gray-900 flex items-center justify-center">
-                  {product.price}
+                  {product.product.price}
                 </span>
               </div>
               <div className="flex items-center justify-center mt-2">
@@ -169,8 +227,8 @@ function TopProducts() {
       </div>
       <div className="flex items-center justify-center mt-8">Animal Type</div>
       <div className={`${products.length >= maximumProductsAdded ? "pointer-events-none" : ""} flex-grow flex items-center justify-center ${isAnimalTypeDropdownOpen ? "mb-32" : ""}`}>
-  <Select options={animalOptions}
-      placeholder={selectedAnimalType.label} onChange={(selectedValue) => {setSelectedAnimalType(selectedValue)}} styles={customStyles}  getOptionValue={(option) => option.id} value={animalOptions.find((c) => c === selectedAnimalType)} onMenuOpen={() => {setIsAnimalTypeDropdownOpen(true)}} onMenuClose={() => {setIsAnimalTypeDropdownOpen(false)}} />
+  <Select options={animals}
+      placeholder={selectedAnimalType.name} onChange={(selectedValue) => {setSelectedAnimalType(selectedValue)}} styles={customStyles} getOptionLabel={getOptionLabel}  getOptionValue={(option) => option.id} value={animals.find((c) => c.id === selectedAnimalType.id)} onMenuOpen={() => {setIsAnimalTypeDropdownOpen(true)}} onMenuClose={() => {setIsAnimalTypeDropdownOpen(false)}} />
 
       </div>
       
@@ -178,16 +236,20 @@ function TopProducts() {
       <div className="flex items-center justify-center mb-2 mt-8">Category</div>
       <div className={`flex-grow flex items-center justify-center ${isCategoryDropdownOpen ? "mb-32" : ""} ${products.length >= maximumProductsAdded ? "pointer-events-none" : ""}`}>
           
-    <Select options={categoryOptions}
-      placeholder={selectedCategory.label} onChange={(selectedValue) => {setIsProductLoading(true);setSelectedCategory(selectedValue);}} styles={customStyles}  getOptionValue={(option) => option.id} value={categoryOptions.find((c) => c === selectedCategory)} onMenuOpen={() => {setIsCategoryDropdownOpen(true)}} onMenuClose={() => {setIsCategoryDropdownOpen(false)}} />
+    <Select options={categories}
+      placeholder={selectedCategory.name} onChange={(selectedValue) => {setIsProductLoading(true);setSelectedCategory(selectedValue);}} styles={customStyles} getOptionLabel={getOptionLabel}  getOptionValue={(option) => option.id} value={categories.find((c) => c.id === selectedCategory.id)} onMenuOpen={() => {setIsCategoryDropdownOpen(true)}} onMenuClose={() => {setIsCategoryDropdownOpen(false)}} />
       
       </div>
       </div>
       <div className={`${selectedCategory.id >= 0 && !isProductLoading ? "" : "hidden"}`}>
         {isProductLoading ? <Loading /> : <>
         <div className="flex items-center justify-center mb-2 mt-5">Products</div>
-      <div className={`overflow-y-auto max-h-[600px] ${products.length >= maximumProductsAdded ? "pointer-events-none" : ""}`}>
-      <Products checkedBoxIds={checkBoxIdsArray} handleCheckBox={(product, checkboxToggle) => {handleCheckBox(checkboxToggle, product)}} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_info_from_components={{"name" : selectedCategory.label, "id" : selectedCategory.id}} animal_info_from_components={{"name" : selectedAnimalType.label, "id" : selectedAnimalType.id}} />
+      <div className={`overflow-y-auto max-h-max ${products.length >= maximumProductsAdded ? "pointer-events-none" : ""}`}>
+      {selectedAnimalType.id && selectedAnimalType.id > 0 && selectedCategory.id && selectedCategory.id > 0 && 
+      <div>
+        <Products isAdminPanelUsage={true} checkedBoxIds={checkBoxIdsArray} handleCheckBox={(product, checkboxToggle) => {handleCheckBox(checkboxToggle, product)}} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_info_from_components={selectedCategory} animal_info_from_components={selectedAnimalType} />
+        </div>
+      }
       </div>
         </>}
 
@@ -196,8 +258,9 @@ function TopProducts() {
       </div>
       <div className="flex flex-wrap items-center justify-center mt-10">
       <button
-          className="bg-green-500 w-36 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4"
+          className="disabled:opacity-25 disabled:cursor-not-allowed bg-green-500 w-36 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4"
           onClick={handleSaveProgress}
+          disabled={isSaveButtonDisabled}
         >
           Save
         </button>

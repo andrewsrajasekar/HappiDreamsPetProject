@@ -75,6 +75,9 @@ public class ProductConstants {
         public static final String INVALID_SORT_BY = "Sort By Column Name is not Supported";
         public static final String INVALID_PRICE_MIN_VALUE = "Price Min Value must be greater than 0";
         public static final String INVALID_PRICE_MAX_VALUE = "Price Max Value must be greater than 0";
+        public static final String INVALID_WEIGHT_UNIT = "Invalid Weight Unit";
+        public static final String EMPTY_ARRAY = "Empty Array";
+        public static final String INVALID_ARRAY = "Invalid Array";
     }
 
     public class SpecialCharacter {

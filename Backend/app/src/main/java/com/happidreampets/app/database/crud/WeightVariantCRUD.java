@@ -16,6 +16,8 @@ import com.happidreampets.app.database.repository.WeightVariantRepository;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
 
+import jakarta.transaction.Transactional;
+
 @Component
 public class WeightVariantCRUD {
 
@@ -56,12 +58,24 @@ public class WeightVariantCRUD {
         return responseData;
     }
 
-    public JSONObject getWeightVariantDetails(Long variantId) {
+    public JSONObject getWeightVariantDetailsInJSONWithExcludeProductList(Long variantId,
+            List<Long> excludedProductIds) {
         JSONObject weightVariantData = new JSONObject();
-        List<WeightVariant> weightVariantList = weightVariantRepository.findAllByVariantId(variantId);
+        List<WeightVariant> weightVariantList = weightVariantRepository.findAllByVariantIdAndNotInProductIds(variantId,
+                excludedProductIds);
         weightVariantData.put(ProductConstants.LowerCase.DATA,
                 getDataInRequiredFormat(weightVariantList).get(ProductConstants.LowerCase.DATA));
         return weightVariantData;
+    }
+
+    public List<WeightVariant> getWeightVariantDetailsWithExcludeProductList(Long variantId,
+            List<Long> excludedProductIds) {
+        return weightVariantRepository.findAllByVariantIdAndNotInProductIds(variantId,
+                excludedProductIds);
+    }
+
+    public List<WeightVariant> getWeightVariantDetails(Long variantId) {
+        return weightVariantRepository.findAllByVariantId(variantId);
     }
 
     public WeightVariant createWeightVariantWithoutVariantId(Product product) throws Exception {
@@ -71,7 +85,9 @@ public class WeightVariantCRUD {
         }
         WeightVariant weightVariant = new WeightVariant();
         weightVariant.setProduct(product);
-        weightVariant.setVariantId(weightVariantRepository.findMaxVariantId() + 1);
+        weightVariant.setVariantId(
+                (weightVariantRepository.findMaxVariantId() == null ? 0 : weightVariantRepository.findMaxVariantId())
+                        + 1);
         weightVariant.setAddedTime(System.currentTimeMillis());
 
         return weightVariantRepository.save(weightVariant);
@@ -90,6 +106,7 @@ public class WeightVariantCRUD {
         return weightVariantRepository.save(weightVariant);
     }
 
+    @Transactional
     public Boolean deleteWeightVariant(Product product, Long variantId) throws Exception {
         WeightVariant existingWeightVariant = weightVariantRepository.findByProductAndVariantId(product, variantId);
         if (existingWeightVariant == null) {

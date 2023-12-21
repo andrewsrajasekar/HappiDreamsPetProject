@@ -7,8 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.json.JSONArray;
@@ -38,22 +37,35 @@ import com.happidreampets.app.constants.ProductConstants.SpecialCharacter;
 import com.happidreampets.app.constants.ProductConstants.ExceptionMessageCase;
 import com.happidreampets.app.controller.APIController.ERROR_CODES;
 import com.happidreampets.app.database.model.Category;
+import com.happidreampets.app.database.model.ColorVariant;
 import com.happidreampets.app.database.model.Product;
 import com.happidreampets.app.database.model.Product.PRODUCTCOLUMN;
 import com.happidreampets.app.database.model.Product.VARIANT_TYPE;
 import com.happidreampets.app.database.model.ProductImage;
+import com.happidreampets.app.database.model.SizeVariant;
+import com.happidreampets.app.database.model.WeightVariant;
 import com.happidreampets.app.database.model.Product.WEIGHT_UNITS;
 import com.happidreampets.app.database.repository.ProductRepository;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
+import com.happidreampets.app.utils.JSONUtils;
+
+import jakarta.transaction.Transactional;
 
 @Component
 public class ProductCRUD {
 
-    private static final Logger LOG = Logger.getLogger(ProductCRUD.class.getName());
-
     @Value("${products.image.size}")
     Integer productImagesSize;
+
+    @Value("${weight.variant.association.limit}")
+    Integer weightVariantAssociationLimit;
+
+    @Value("${size.variant.association.limit}")
+    Integer sizeVariantAssociationLimit;
+
+    @Value("${color.variant.association.limit}")
+    Integer colorVariantAssociationLimit;
 
     public static final String PRODUCTS_IMAGE_LOCATION_FULL = System.getProperty(OtherCase.USER_DOT_DIR)
             + "/src/main/resources" + SpecialCharacter.SLASH + LowerCase.STATIC + SpecialCharacter.SLASH
@@ -164,18 +176,25 @@ public class ProductCRUD {
         return productData;
     }
 
-    public JSONObject getAllAvailableProductDetailsForGivenVariation(Category category, VARIANT_TYPE variantType,
+    public JSONObject getAllAvailableProductDetailsForGivenVariation(Category category,
+            VARIANT_TYPE variantType,
             Boolean skipVisibility) {
         JSONObject productData = new JSONObject();
-        Iterable<Product> productIterable = null;
+        List<Product> productList = null;
         if (variantType == VARIANT_TYPE.COLOR) {
-            productIterable = productRepository.findProductsNotInColorVariant(category, skipVisibility);
+            productList = productRepository.findProductsNotInColorVariantOrUnderLimit(colorVariantAssociationLimit,
+                    category,
+                    skipVisibility);
         } else if (variantType == VARIANT_TYPE.SIZE) {
-            productIterable = productRepository.findProductsNotInSizeVariant(category, skipVisibility);
+            productList = productRepository.findProductsNotInSizeVariantOrUnderLimit(sizeVariantAssociationLimit,
+                    category,
+                    skipVisibility);
         } else if (variantType == VARIANT_TYPE.WEIGHT) {
-            productIterable = productRepository.findProductsNotInWeightVariant(category, skipVisibility);
+            productList = productRepository.findProductsNotInWeightVariantOrUnderLimit(weightVariantAssociationLimit,
+                    category,
+                    skipVisibility);
         }
-        productData.put(LowerCase.DATA, getDataInRequiredFormat(productIterable).get(LowerCase.DATA));
+        productData.put(LowerCase.DATA, getDataInRequiredFormat(productList).get(LowerCase.DATA));
         return productData;
     }
 
@@ -187,32 +206,53 @@ public class ProductCRUD {
     }
 
     public JSONObject getProductVariantDetailsForUI(Long id, Category category) {
-        JSONObject productData = new JSONObject();
-        Product product = null;
-        try {
-            product = productRepository.findByIdAndCategoryAndToBeDeletedIsFalse(id, category);
-        } catch (Exception ex) {
-            LOG.log(Level.SEVERE, "Excep ::: " + ex.getMessage());
-            throw ex;
-        }
+        Product product = productRepository.findByIdAndCategoryAndToBeDeletedIsFalse(id, category);
+        List<Long> productIds = new ArrayList<>();
+        productIds.add(product.getId());
 
         JSONObject variationInfo = new JSONObject();
-        variationInfo.put(WeightVariantConstants.SnakeCase.WEIGHT_VARIANT_INFO, JSONObject.NULL);
-        variationInfo.put(SizeVariantConstants.SnakeCase.SIZE_VARIANT_INFO, JSONObject.NULL);
-        variationInfo.put(ColorVariantConstants.SnakeCase.COLOR_VARIANT_INFO, JSONObject.NULL);
+        variationInfo.put(WeightVariantConstants.SnakeCase.WEIGHT_VARIANT_INFO, new JSONArray());
+        variationInfo.put(SizeVariantConstants.SnakeCase.SIZE_VARIANT_INFO, new JSONArray());
+        variationInfo.put(ColorVariantConstants.SnakeCase.COLOR_VARIANT_INFO, new JSONArray());
         if (product.getVariantWeightId() != null) {
             variationInfo.put(WeightVariantConstants.SnakeCase.WEIGHT_VARIANT_INFO,
-                    weightVariantCRUD.getWeightVariantDetails(product.getVariantWeightId()));
+                    getVariationToProducts(weightVariantCRUD
+                            .getWeightVariantDetailsWithExcludeProductList(product.getVariantWeightId(), productIds))
+                            .get(ProductConstants.LowerCase.DATA));
         }
         if (product.getVariantSizeId() != null) {
             variationInfo.put(SizeVariantConstants.SnakeCase.SIZE_VARIANT_INFO,
-                    sizeVariantCRUD.getSizeVariantDetails(product.getVariantSizeId()));
+                    getVariationToProducts(sizeVariantCRUD
+                            .getSizeVariantDetailsWithExcludeProductList(product.getVariantSizeId(), productIds))
+                            .get(ProductConstants.LowerCase.DATA));
         }
         if (product.getVariantColorId() != null) {
             variationInfo.put(ColorVariantConstants.SnakeCase.COLOR_VARIANT_INFO,
-                    colorVariantCRUD.getColorVariantDetails(product.getVariantColorId()));
+                    getVariationToProducts(colorVariantCRUD
+                            .getColorVariantProductDetailsWithExcludeProductList(product.getVariantColorId(),
+                                    productIds))
+                            .get(ProductConstants.LowerCase.DATA));
         }
-        return productData;
+        return variationInfo;
+    }
+
+    private <T> JSONObject getVariationToProducts(List<T> variantsData) {
+        List<Product> products = variantsData.stream()
+                .map(variant -> {
+                    if (variant instanceof SizeVariant) {
+                        return ((SizeVariant) variant).getProduct();
+                    } else if (variant instanceof WeightVariant) {
+                        return ((WeightVariant) variant).getProduct();
+                    } else if (variant instanceof ColorVariant) {
+                        return ((ColorVariant) variant).getProduct();
+                    }
+                    return null;
+                })
+                .filter(product -> product != null)
+                .collect(Collectors.toList());
+
+        getDbFilter().setFormat(DATAFORMAT.JSON);
+        return getDataInRequiredFormat(products);
     }
 
     public JSONObject getProductForUI(Long id, Category category, Boolean skipVisibility) {
@@ -312,6 +352,11 @@ public class ProductCRUD {
     public void createProductVariant(Product currentProduct, Product variantProduct, VARIANT_TYPE variantType)
             throws Exception {
         if (variantType.equals(VARIANT_TYPE.WEIGHT)) {
+            if (!(currentProduct.getWeight() != null && currentProduct.getWeight() > 0
+                    && currentProduct.getWeightUnits() != null
+                    && currentProduct.getWeightUnits() != WEIGHT_UNITS.NONE)) {
+                throw new Exception(WeightVariantConstants.ExceptionMessageCase.NO_WEIGHT_DATA_PRESENT_IN_THE_PRODUCT);
+            }
             if (currentProduct.getVariantWeightId() != null && variantProduct.getVariantWeightId() != null) {
                 if (currentProduct.getVariantWeightId() == variantProduct.getVariantWeightId()) {
                     throw new Exception(WeightVariantConstants.ExceptionMessageCase.ALREADY_WEIGHT_VARIANT_ADDED);
@@ -322,11 +367,23 @@ public class ProductCRUD {
             } else {
                 Long variantId = 0l;
                 if (currentProduct.getVariantWeightId() != null) {
+                    if (weightVariantCRUD
+                            .getWeightVariantDetails(currentProduct.getVariantWeightId())
+                            .size() >= weightVariantAssociationLimit) {
+                        throw new Exception(
+                                WeightVariantConstants.ExceptionMessageCase.MAX_WEIGHT_VARIANT_ASSOCIATED);
+                    }
                     variantId = weightVariantCRUD
                             .createWeightVariant(variantProduct, currentProduct.getVariantWeightId()).getVariantId();
                     variantProduct.setVariantWeightId(variantId);
                     productRepository.save(variantProduct);
                 } else if (variantProduct.getVariantWeightId() != null) {
+                    if (weightVariantCRUD
+                            .getWeightVariantDetails(variantProduct.getVariantWeightId())
+                            .size() >= weightVariantAssociationLimit) {
+                        throw new Exception(
+                                WeightVariantConstants.ExceptionMessageCase.MAX_WEIGHT_VARIANT_ASSOCIATED);
+                    }
                     variantId = weightVariantCRUD
                             .createWeightVariant(currentProduct, variantProduct.getVariantWeightId()).getVariantId();
                     currentProduct.setVariantWeightId(variantId);
@@ -342,6 +399,9 @@ public class ProductCRUD {
                 }
             }
         } else if (variantType.equals(VARIANT_TYPE.SIZE)) {
+            if (!(currentProduct.getSize() != null && currentProduct.getSize().trim().length() > 0)) {
+                throw new Exception(SizeVariantConstants.ExceptionMessageCase.NO_SIZE_DATA_PRESENT_IN_THE_PRODUCT);
+            }
             if (currentProduct.getVariantSizeId() != null && variantProduct.getVariantSizeId() != null) {
                 if (currentProduct.getVariantSizeId() == variantProduct.getVariantSizeId()) {
                     throw new Exception(SizeVariantConstants.ExceptionMessageCase.ALREADY_SIZE_VARIANT_ADDED);
@@ -352,11 +412,23 @@ public class ProductCRUD {
             } else {
                 Long variantId = 0l;
                 if (currentProduct.getVariantSizeId() != null) {
+                    if (sizeVariantCRUD
+                            .getSizeVariantDetails(currentProduct.getVariantSizeId())
+                            .size() >= sizeVariantAssociationLimit) {
+                        throw new Exception(
+                                SizeVariantConstants.ExceptionMessageCase.MAX_SIZE_VARIANT_ASSOCIATED);
+                    }
                     variantId = sizeVariantCRUD
                             .createSizeVariant(variantProduct, currentProduct.getVariantSizeId()).getVariantId();
                     variantProduct.setVariantSizeId(variantId);
                     productRepository.save(variantProduct);
                 } else if (variantProduct.getVariantSizeId() != null) {
+                    if (sizeVariantCRUD
+                            .getSizeVariantDetails(variantProduct.getVariantSizeId())
+                            .size() >= sizeVariantAssociationLimit) {
+                        throw new Exception(
+                                SizeVariantConstants.ExceptionMessageCase.MAX_SIZE_VARIANT_ASSOCIATED);
+                    }
                     variantId = sizeVariantCRUD
                             .createSizeVariant(currentProduct, variantProduct.getVariantSizeId()).getVariantId();
                     currentProduct.setVariantSizeId(variantId);
@@ -372,6 +444,9 @@ public class ProductCRUD {
                 }
             }
         } else if (variantType.equals(VARIANT_TYPE.COLOR)) {
+            if (!(currentProduct.getColor() != null && currentProduct.getColor().trim().length() > 0)) {
+                throw new Exception(ColorVariantConstants.ExceptionMessageCase.NO_COLOR_DATA_PRESENT_IN_THE_PRODUCT);
+            }
             if (currentProduct.getVariantColorId() != null && variantProduct.getVariantColorId() != null) {
                 if (currentProduct.getVariantColorId() == variantProduct.getVariantColorId()) {
                     throw new Exception(ColorVariantConstants.ExceptionMessageCase.ALREADY_COLOR_VARIANT_ADDED);
@@ -382,22 +457,34 @@ public class ProductCRUD {
             } else {
                 Long variantId = 0l;
                 if (currentProduct.getVariantColorId() != null) {
+                    if (colorVariantCRUD
+                            .getColorVariantProductDetails(currentProduct.getVariantColorId())
+                            .size() >= colorVariantAssociationLimit) {
+                        throw new Exception(
+                                ColorVariantConstants.ExceptionMessageCase.MAX_COLOR_VARIANT_ASSOCIATED);
+                    }
                     variantId = colorVariantCRUD
                             .createColorVariant(variantProduct, currentProduct.getVariantColorId()).getVariantId();
-                    variantProduct.setVariantSizeId(variantId);
+                    variantProduct.setVariantColorId(variantId);
                     productRepository.save(variantProduct);
                 } else if (variantProduct.getVariantColorId() != null) {
+                    if (colorVariantCRUD
+                            .getColorVariantProductDetails(variantProduct.getVariantColorId())
+                            .size() >= colorVariantAssociationLimit) {
+                        throw new Exception(
+                                ColorVariantConstants.ExceptionMessageCase.MAX_COLOR_VARIANT_ASSOCIATED);
+                    }
                     variantId = colorVariantCRUD
                             .createColorVariant(currentProduct, variantProduct.getVariantColorId()).getVariantId();
-                    currentProduct.setVariantSizeId(variantId);
+                    currentProduct.setVariantColorId(variantId);
                     productRepository.save(currentProduct);
                 } else {
                     variantId = colorVariantCRUD.createSizeVariantWithoutVariantId(currentProduct).getVariantId();
-                    currentProduct.setVariantSizeId(variantId);
+                    currentProduct.setVariantColorId(variantId);
                     productRepository.save(currentProduct);
                     variantId = colorVariantCRUD
-                            .createColorVariant(variantProduct, currentProduct.getVariantSizeId()).getVariantId();
-                    variantProduct.setVariantSizeId(variantId);
+                            .createColorVariant(variantProduct, currentProduct.getVariantColorId()).getVariantId();
+                    variantProduct.setVariantColorId(variantId);
                     productRepository.save(variantProduct);
                 }
             }
@@ -490,31 +577,56 @@ public class ProductCRUD {
         return true;
     }
 
+    @Transactional
     public void deleteProductVariant(Product currentProduct, VARIANT_TYPE variantType)
             throws Exception {
         if (variantType.equals(VARIANT_TYPE.WEIGHT)) {
             if (currentProduct.getVariantWeightId() == null) {
                 throw new Exception(ProductConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
             } else {
-                weightVariantCRUD.deleteWeightVariant(currentProduct, currentProduct.getVariantWeightId());
+                Long weightVariantId = currentProduct.getVariantWeightId();
+                weightVariantCRUD.deleteWeightVariant(currentProduct, weightVariantId);
                 currentProduct.setVariantWeightId(null);
                 productRepository.save(currentProduct);
+
+                List<WeightVariant> weightVariantDtls = weightVariantCRUD.getWeightVariantDetails(weightVariantId);
+                if (weightVariantDtls.size() == 1) {
+                    weightVariantCRUD.deleteWeightVariant(weightVariantDtls.get(0).getProduct(), weightVariantId);
+                    weightVariantDtls.get(0).getProduct().setVariantWeightId(null);
+                    productRepository.save(currentProduct);
+                }
             }
         } else if (variantType.equals(VARIANT_TYPE.SIZE)) {
             if (currentProduct.getVariantSizeId() == null) {
                 throw new Exception(ProductConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
             } else {
+                Long sizeVariantId = currentProduct.getVariantSizeId();
                 sizeVariantCRUD.deleteSizeVariant(currentProduct, currentProduct.getVariantSizeId());
                 currentProduct.setVariantSizeId(null);
                 productRepository.save(currentProduct);
+
+                List<SizeVariant> sizeVariantDtls = sizeVariantCRUD.getSizeVariantDetails(sizeVariantId);
+                if (sizeVariantDtls.size() == 1) {
+                    sizeVariantCRUD.deleteSizeVariant(sizeVariantDtls.get(0).getProduct(), sizeVariantId);
+                    sizeVariantDtls.get(0).getProduct().setVariantSizeId(null);
+                    productRepository.save(currentProduct);
+                }
             }
         } else if (variantType.equals(VARIANT_TYPE.COLOR)) {
             if (currentProduct.getVariantColorId() == null) {
                 throw new Exception(ProductConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT);
             } else {
+                Long colorVariantId = currentProduct.getVariantColorId();
                 colorVariantCRUD.deleteColorVariant(currentProduct, currentProduct.getVariantColorId());
                 currentProduct.setVariantColorId(null);
                 productRepository.save(currentProduct);
+
+                List<ColorVariant> colorVariantDtls = colorVariantCRUD.getColorVariantProductDetails(colorVariantId);
+                if (colorVariantDtls.size() == 1) {
+                    colorVariantCRUD.deleteColorVariant(colorVariantDtls.get(0).getProduct(), colorVariantId);
+                    colorVariantDtls.get(0).getProduct().setVariantColorId(null);
+                    productRepository.save(currentProduct);
+                }
             }
         }
     }
@@ -592,24 +704,35 @@ public class ProductCRUD {
             }
 
             if (body.has(CamelCase.WEIGHTUNITS)) {
-                if (body.get(LowerCase.WEIGHT) instanceof Integer) {
-                    Integer stocks = Integer.parseInt(body.get(LowerCase.WEIGHT).toString());
-                    if (stocks <= 0) {
+                WEIGHT_UNITS weightUnit = WEIGHT_UNITS.getEnumValueFromGivenString(
+                        JSONUtils.optString(body, ProductConstants.CamelCase.WEIGHTUNITS, null));
+
+                if (weightUnit == null) {
+                    code = null;
+                    message = MessageCase.INVALID_WEIGHT_UNIT;
+                    missingField = CamelCase.WEIGHTUNITS;
+                    isError = true;
+                }
+                if (!isError) {
+                    if (body.get(LowerCase.WEIGHT) instanceof Integer) {
+                        Integer stocks = Integer.parseInt(body.get(LowerCase.WEIGHT).toString());
+                        if (stocks <= 0) {
+                            code = null;
+                            message = MessageCase.THE_VALUE_SHOULD_BE_GREATER_THAN_0;
+                            missingField = LowerCase.WEIGHT;
+                            isError = true;
+                        }
+                    } else if (body.get(LowerCase.PRICE) instanceof Long) {
                         code = null;
-                        message = MessageCase.THE_VALUE_SHOULD_BE_GREATER_THAN_0;
+                        message = MessageCase.THE_VALUE_IS_TOO_HIGH;
+                        missingField = LowerCase.WEIGHT;
+                        isError = true;
+                    } else {
+                        code = null;
+                        message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
                         missingField = LowerCase.WEIGHT;
                         isError = true;
                     }
-                } else if (body.get(LowerCase.PRICE) instanceof Long) {
-                    code = null;
-                    message = MessageCase.THE_VALUE_IS_TOO_HIGH;
-                    missingField = LowerCase.WEIGHT;
-                    isError = true;
-                } else {
-                    code = null;
-                    message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
-                    missingField = LowerCase.WEIGHT;
-                    isError = true;
                 }
             }
             if (!isError) {
@@ -725,24 +848,35 @@ public class ProductCRUD {
         }
 
         if (body.has(CamelCase.WEIGHTUNITS)) {
-            if (body.get(LowerCase.WEIGHT) instanceof Integer) {
-                Integer stocks = Integer.parseInt(body.get(LowerCase.WEIGHT).toString());
-                if (stocks <= 0) {
+            WEIGHT_UNITS weightUnit = WEIGHT_UNITS.getEnumValueFromGivenString(
+                    JSONUtils.optString(body, ProductConstants.CamelCase.WEIGHTUNITS, null));
+
+            if (weightUnit == null) {
+                code = null;
+                message = MessageCase.INVALID_WEIGHT_UNIT;
+                missingField = CamelCase.WEIGHTUNITS;
+                isError = true;
+            }
+            if (!isError) {
+                if (body.get(LowerCase.WEIGHT) instanceof Integer) {
+                    Integer stocks = Integer.parseInt(body.get(LowerCase.WEIGHT).toString());
+                    if (stocks <= 0) {
+                        code = null;
+                        message = MessageCase.THE_VALUE_SHOULD_BE_GREATER_THAN_0;
+                        missingField = LowerCase.WEIGHT;
+                        isError = true;
+                    }
+                } else if (body.get(LowerCase.PRICE) instanceof Long) {
                     code = null;
-                    message = MessageCase.THE_VALUE_SHOULD_BE_GREATER_THAN_0;
+                    message = MessageCase.THE_VALUE_IS_TOO_HIGH;
+                    missingField = LowerCase.WEIGHT;
+                    isError = true;
+                } else {
+                    code = null;
+                    message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
                     missingField = LowerCase.WEIGHT;
                     isError = true;
                 }
-            } else if (body.get(LowerCase.PRICE) instanceof Long) {
-                code = null;
-                message = MessageCase.THE_VALUE_IS_TOO_HIGH;
-                missingField = LowerCase.WEIGHT;
-                isError = true;
-            } else {
-                code = null;
-                message = MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
-                missingField = LowerCase.WEIGHT;
-                isError = true;
             }
         }
         if (!isError) {
@@ -777,8 +911,7 @@ public class ProductCRUD {
         } else {
             Boolean isError = false;
 
-            if (VARIANT_TYPE
-                    .valueOf(body.get(SnakeCase.VARIANT_TYPE).toString()) == null) {
+            if (VARIANT_TYPE.getEnumValueFromGivenString(body.get(SnakeCase.VARIANT_TYPE).toString()) == null) {
                 code = null;
                 message = ExceptionMessageCase.INVALID_VARIANT_TYPE;
                 missingField = SnakeCase.VARIANT_TYPE;
@@ -786,7 +919,8 @@ public class ProductCRUD {
             }
 
             if (!isError) {
-                if (body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Long) {
+                if (body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Long
+                        || body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Integer) {
                     Long animalId = Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString());
                     if (animalCRUD.getAnimal(animalId) == null) {
                         code = null;
@@ -803,7 +937,8 @@ public class ProductCRUD {
             }
 
             if (!isError) {
-                if (body.get(CategoryConstants.SnakeCase.CATEGORY_ID) instanceof Long) {
+                if (body.get(CategoryConstants.SnakeCase.CATEGORY_ID) instanceof Long
+                        || body.get(CategoryConstants.SnakeCase.CATEGORY_ID) instanceof Integer) {
                     Long categoryId = Long.parseLong(body.get(CategoryConstants.SnakeCase.CATEGORY_ID).toString());
                     if (categoryCRUD.getCategoryDetail(
                             animalCRUD.getAnimal(
@@ -823,7 +958,8 @@ public class ProductCRUD {
             }
 
             if (!isError) {
-                if (body.get(SnakeCase.PRODUCT_ID) instanceof Long) {
+                if (body.get(SnakeCase.PRODUCT_ID) instanceof Long
+                        || body.get(SnakeCase.PRODUCT_ID) instanceof Integer) {
                     Long productId = Long.parseLong(body.get(SnakeCase.PRODUCT_ID).toString());
                     Long categoryId = Long.parseLong(body.get(CategoryConstants.SnakeCase.CATEGORY_ID).toString());
                     Product product = getProduct(productId, categoryCRUD.getCategoryDetail(
@@ -844,6 +980,37 @@ public class ProductCRUD {
                     missingField = SnakeCase.PRODUCT_ID;
                     isError = true;
                 }
+            }
+
+            if (!isError) {
+                isSuccess = Boolean.TRUE;
+            }
+        }
+        response.put(LowerCase.SUCCESS, isSuccess);
+        if (!isSuccess) {
+            response.put(LowerCase.DATA, new JSONObject().put(LowerCase.FIELD, missingField).put(LowerCase.CODE, code)
+                    .put(LowerCase.MESSAGE, message));
+        }
+        return response;
+    }
+
+    public JSONObject checkBodyOfDeleteVariation(JSONObject body) {
+        JSONObject response = new JSONObject();
+        Boolean isSuccess = Boolean.FALSE;
+        String missingField = LowerCase.EMPTY_QUOTES;
+        String message = MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
+        String code = ERROR_CODES.MANDATORY_MISSING.name();
+        if (!body.has(SnakeCase.VARIANT_TYPE)) {
+            missingField = SnakeCase.VARIANT_TYPE;
+            message = message.replace(LoggerCase.ARG0, SnakeCase.VARIANT_TYPE);
+        } else {
+            Boolean isError = false;
+
+            if (VARIANT_TYPE.getEnumValueFromGivenString(body.get(SnakeCase.VARIANT_TYPE).toString()) == null) {
+                code = null;
+                message = ExceptionMessageCase.INVALID_VARIANT_TYPE;
+                missingField = SnakeCase.VARIANT_TYPE;
+                isError = true;
             }
 
             if (!isError) {

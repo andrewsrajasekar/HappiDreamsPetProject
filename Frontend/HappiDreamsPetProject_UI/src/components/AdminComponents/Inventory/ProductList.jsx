@@ -88,8 +88,32 @@ function ProductList({selectedCategory, selectedAnimal}){
     }
 
     const backToList = () => {
+        resetData();
         setEditComponent(false);
         setEditFormKey(editFormKey + 1);
+        
+    }
+
+    const resetData = () => {
+        setProductId(-1);
+        setProductName("");
+        setProductDescription("");
+        setProductDetails("");
+        setProductDetailsNonEditor("");
+        setIsProductDetailsEditorText(true);
+        setIsProductColorEnabled(false);
+        setProductColor("");
+        setIsProductSizeEnabled(false);
+        setProductSize("");
+        setIsProductWeightEnabled(false);
+        setProductWeightUnits("");
+        setProductWeight(1);
+        setProductStocksAvailable(1);
+        setProductPrice(1);
+        setImages([]);
+        setImageUrls([]);
+        setIsFileUpload(true);
+        setVariationPrimaryId(undefined);
     }
 
 

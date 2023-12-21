@@ -4,18 +4,21 @@ import { useEffect, useState } from "react";
 import Loading from "../../Loading";
 import ReactTooltip from 'react-tooltip'
 import { InformationCircleIcon } from "@heroicons/react/20/solid";
+import { getAllAnimals, getAllCategories } from "../../../services/ApiClient";
+import UINotification from "../../UINotification";
 
-function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, editMode, alreadySelectedProductsForCategory, category, animalType}) {
+function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, editMode, alreadySelectedProductsForCategory, editCategory, editAnimal}) {
     const [animalOptions, setAnimalOptions] = useState([]);
     const [categoryOptions, setCategoryOptions] = useState([]);
-    const [selectedAnimalType, setSelectedAnimalType] = useState(null);
-    const [selectedCategory, setSelectedCategory] = useState(null);
+    const [selectedAnimalType, setSelectedAnimalType] = useState({id: -1, name: "Select a Animal Type"});
+    const [selectedCategory, setSelectedCategory] = useState({id: -1, name: "Select a Category"});
     const [isCategoryLoading, setIsCategoryLoading] = useState(false);
     const [isProductLoading, setIsProductLoading] = useState(false);
     const [maxHeight, setMaxHeight] = useState(0);
     const [maxCheckedProducts, setMaxCheckedProducts] = useState(6);
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [checkedIds, setCheckedIds] = useState([]);
+    const [productRefreshKey, setProductRefreshKey] = useState(1);
 
     useEffect(() => {
       setSelectedProducts(alreadySelectedProductsForCategory);
@@ -25,6 +28,17 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
       });
       setCheckedIds(alreadySelectedProducts);
     }, []);
+
+    useEffect(() => {
+      if(editMode !== undefined && editMode){
+        let alreadySelectedProducts = [];
+        selectedProducts.map((data, index) => {
+          alreadySelectedProducts.push(data.id);
+        });
+        setCheckedIds(alreadySelectedProducts);
+        setProductRefreshKey(productRefreshKey + 1);
+      }
+    }, [selectedProducts]);
 
     useEffect(() => {
         // Calculate the available height for the Products div
@@ -61,21 +75,24 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
       } 
   
       const addProduct = (product) => {
-        
-        let isProductExists = selectedProducts.some((productData) => productData.id === product.id);
-        if(!isProductExists){
-          let newSelectedProducts = [...selectedProducts];
-          newSelectedProducts.push(product);
-          setSelectedProducts(newSelectedProducts);
-        }
+        setSelectedProducts(prevProducts => {
+          let isProductExists = prevProducts.some((productData) => productData.id === product.id);
+          if(!isProductExists){
+            const updatedProducts = [...prevProducts];
+            const data = { category: selectedCategory };
+            const newProduct = { ...product, ...data };
+            updatedProducts.push(newProduct);
+            return updatedProducts;
+          }else{
+            return prevProducts;
+          }
+        });
       }
     
       const removeProduct = (productData) => {
-        
-        let modifiedProducts = selectedProducts.filter((product) => {
-          return !(product.id === productData.id && product.animalType === selectedAnimalType.label && product.categoryName === selectedCategory.label);
-        });
-        setSelectedProducts(modifiedProducts);
+        setSelectedProducts(prevProducts => prevProducts.filter((product) => {
+          return !(product.id === productData.id && product.category.animal.id === selectedAnimalType.id && product.category.id === selectedCategory.id);
+        }));
       }
       
       const handleCheckBox = (checkboxToggle, product) => {
@@ -87,9 +104,9 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
       }
 
       const manipulateCategoryData = (categoryData) => {
-        if(existingAnimalTypeCategories.hasOwnProperty(selectedAnimalType.label)){
+        if(existingAnimalTypeCategories.hasOwnProperty(selectedAnimalType.id)){
           categoryData.map((data, index) => {
-            if(existingAnimalTypeCategories[selectedAnimalType.label].includes(data.label)){
+            if(existingAnimalTypeCategories[selectedAnimalType.id].includes(data.id)){
               data.disabled = true;
             }else{
               data.disabled = false;
@@ -98,31 +115,51 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
         }
         return categoryData;
       }
+
+      const fetchAllAnimals = async() => {
+        const allAnimalsData = await getAllAnimals();
+        if(allAnimalsData.isSuccess){
+          setAnimalOptions(allAnimalsData.successResponse.data.data);
+        }else{
+          setAnimalOptions([]);
+          UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+        }
+      }
+
+      const fetchAllCategories = async() => {
+        const allCategoriesData = await getAllCategories(selectedAnimalType.id);
+        if(allCategoriesData.isSuccess){
+          setCategoryOptions( manipulateCategoryData(allCategoriesData.successResponse.data.data) );
+        }else{
+          UINotification({ message: "Issue Occured, while collecting Categories Data", type: "Error" });
+        }
+      }
+
+      const getOptionLabel = (option) => {
+        if(option.hasOwnProperty("name")){
+          return option.name;
+        }else if(option.hasOwnProperty("label")){
+          return option.label;
+        }
+        return null;
+      }
   
       useEffect(() => {
-        setAnimalOptions([
-          { id: 1, label: 'Cat' },
-          { id: 2, label: 'Dog' },
-          { id: 3, label: 'Fish' }]);
+        fetchAllAnimals();
       }, []);
 
       useEffect(() => {
         if(editMode !== undefined && editMode){
           if(animalOptions !== undefined && animalOptions.length > 0){
-            setSelectedAnimalType(animalOptions.find(data => data.label === animalType));
+            setSelectedAnimalType(animalOptions.find(data => data.id === editAnimal.id));
           }
         }
       }, [animalOptions])
   
       useEffect(() => {
         if (selectedAnimalType && selectedAnimalType.id >= 0) {
-          let categoryData = [
-            { id: 1, label: 'Dummy Category 1' },
-            { id: 2, label: 'Dummy Category 2' },
-            { id: 3, label: 'Dummy Category 3' }];
-          categoryData = manipulateCategoryData(categoryData);
-          setCategoryOptions(categoryData);
-          setSelectedCategory(null);
+          fetchAllCategories();
+          setSelectedCategory({id: -1, name: "Select a Category"});
           setIsCategoryLoading(false);
         }
       }, [selectedAnimalType]);
@@ -130,7 +167,7 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
       useEffect(() => {
         if(editMode !== undefined && editMode){
           if(categoryOptions !== undefined && categoryOptions.length > 0){
-            setSelectedCategory(categoryOptions.find(data => data.label === category));
+            setSelectedCategory(categoryOptions.find(data => data.id === editCategory.id));
           }
         }
       }, [categoryOptions])
@@ -153,7 +190,8 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
         }),
         option: (provided, state) => ({
             ...provided,
-            cursor: state.isDisabled ? 'not-allowed' : 'pointer'
+            cursor: state.isDisabled ? 'not-allowed' : 'pointer',
+            width: state.isDisabled ? '100%' : 'auto'
           })
       };
 
@@ -171,6 +209,7 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
                     style={{
                       position: 'relative',
                       display: 'inline-block',
+                      width: '100%'
                     }}
                   >
                     <span data-tip="This Category is already present in below Component" data-for={child.key}>
@@ -197,7 +236,7 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
                         <div className="flex items-center justify-center mb-2">Animal Type</div>
                         <div className="flex items-center justify-center">
                             <Select options={animalOptions} isDisabled={editMode !== undefined && editMode}
-                                placeholder={"Select a Animal Type"} onChange={(selectedValue) => { setSelectedAnimalType(selectedValue); if(selectedValue !== selectedAnimalType){setIsCategoryLoading(true);}}} styles={customStyles} getOptionValue={(option) => option.id} value={animalOptions.find((c) => c === selectedAnimalType)} />
+                                placeholder={"Select a Animal Type"} onChange={(selectedValue) => { setSelectedAnimalType(selectedValue); if(selectedValue !== selectedAnimalType){setIsCategoryLoading(true);}}} styles={customStyles} getOptionLabel={getOptionLabel} getOptionValue={(option) => option.id} value={animalOptions.find((c) => c.id === selectedAnimalType.id)} />
                         </div>
 
                     </div>
@@ -205,7 +244,7 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
                         <div className="flex items-center justify-center mb-2">Category</div>
                         <div className="flex items-center justify-center">
                             <Select options={categoryOptions}  isDisabled={editMode !== undefined && editMode}
-                            isLoading={isCategoryLoading} isOptionDisabled={(option) => option.disabled}  components={{ MenuList  }} getOptionLabel={(option) => option.label} placeholder={isCategoryLoading ? "Loading..." : "Select a Category"} onChange={(selectedValue) => { if(selectedValue !== selectedCategory){setIsProductLoading(true);} setSelectedCategory(selectedValue) }} styles={customStyles} getOptionValue={(option) => option.id} value={selectedCategory} />
+                            isLoading={isCategoryLoading} isOptionDisabled={(option) => option.disabled}  components={{ MenuList  }} getOptionLabel={getOptionLabel} placeholder={isCategoryLoading ? "Loading..." : "Select a Category"} onChange={(selectedValue) => { if(selectedValue !== selectedCategory){setIsProductLoading(true);} setSelectedCategory(selectedValue) }} styles={customStyles} getOptionValue={(option) => option.id} value={categoryOptions.find((c) => c.id === selectedCategory.id)} />
                         </div>
                     </div>
                 </div>
@@ -220,7 +259,7 @@ function HomeCategoryAddPopUp({existingAnimalTypeCategories, onSaveOfProducts, e
 
                             {/* max-h-[600px] */}
                             <div className={`overflow-y-auto`} style={{ maxHeight: `${maxHeight}px` }} >
-                                <Products checkedBoxIds={checkedIds} handleCheckBox={(product, checkboxToggle) => { handleCheckBox(checkboxToggle, product) }} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_info_from_components={{"name" : selectedCategory.label, "id" : selectedCategory.id}} animal_info_from_components={{"name" : selectedAnimalType.label, "id" : selectedAnimalType.id}} maxCheckedForCheckBox={maxCheckedProducts} />
+                                <Products key={productRefreshKey} isAdminPanelUsage={true} checkedBoxIds={checkedIds} handleCheckBox={(product, checkboxToggle) => { handleCheckBox(checkboxToggle, product) }} preventProductNavigation={true} hideTitleVisibility={true} hideSortVisibility={true} category_info_from_components={selectedCategory} animal_info_from_components={selectedAnimalType} maxCheckedForCheckBox={maxCheckedProducts} />
                             </div>
                         </>}
                     </div>

@@ -83,7 +83,6 @@ public class ProductController extends APIController {
         return failureResponse.throwMandatoryMissing();
     }
 
-    @AccessLevel({ AccessLevel.AccessEnum.USER, AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/products", method = RequestMethod.GET)
     public ResponseEntity<String> getProducts(
             @RequestParam(value = ProductConstants.SnakeCase.PRICE_MIN, required = false) Long minPrice,
@@ -221,6 +220,8 @@ public class ProductController extends APIController {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
                 throw new Exception(ProductConstants.ExceptionMessageCase.MISSING_PRODUCT_FIELD_FOR_CREATE);
             }
+            WEIGHT_UNITS weightUnit = WEIGHT_UNITS.getEnumValueFromGivenString(
+                    JSONUtils.optString(body, ProductConstants.CamelCase.WEIGHTUNITS, null));
             Product product = productCRUD.createProduct(getCurrentCategory(),
                     body.get(ProductConstants.LowerCase.NAME).toString(),
                     body.get(ProductConstants.LowerCase.DESCRIPTION).toString(),
@@ -228,7 +229,7 @@ public class ProductController extends APIController {
                     body.get(ProductConstants.LowerCase.DETAILS).toString(),
                     JSONUtils.optString(body, ProductConstants.LowerCase.COLOR, null),
                     JSONUtils.optString(body, ProductConstants.LowerCase.SIZE, null),
-                    JSONUtils.optEnum(body, ProductConstants.CamelCase.WEIGHTUNITS, WEIGHT_UNITS.class),
+                    weightUnit,
                     JSONUtils.optInteger(body, ProductConstants.LowerCase.WEIGHT, -1),
                     JSONUtils.optLong(body, ProductConstants.LowerCase.STOCKS, null),
                     JSONUtils.optLong(body, ProductConstants.LowerCase.PRICE, null));
@@ -268,6 +269,13 @@ public class ProductController extends APIController {
             Boolean isSizeUpdated = body.has(ProductConstants.LowerCase.SIZE);
             Boolean isWeightUpdated = body.has(ProductConstants.CamelCase.WEIGHTUNITS)
                     && body.has(ProductConstants.LowerCase.WEIGHT);
+
+            WEIGHT_UNITS weightUnit = null;
+            if (isWeightUpdated) {
+                weightUnit = WEIGHT_UNITS.getEnumValueFromGivenString(
+                        JSONUtils.optString(body, ProductConstants.CamelCase.WEIGHTUNITS, null));
+            }
+
             Product product = productCRUD.updateProduct(currentProduct.getId(),
                     JSONUtils.optString(body, ProductConstants.LowerCase.NAME, null),
                     JSONUtils.optString(body, ProductConstants.LowerCase.DESCRIPTION, null),
@@ -278,7 +286,7 @@ public class ProductController extends APIController {
                     isSizeUpdated,
                     JSONUtils.optString(body, ProductConstants.LowerCase.SIZE, null),
                     isWeightUpdated,
-                    JSONUtils.optEnum(body, ProductConstants.CamelCase.WEIGHTUNITS, WEIGHT_UNITS.class),
+                    weightUnit,
                     JSONUtils.optInteger(body, ProductConstants.LowerCase.WEIGHT, null),
                     JSONUtils.optLong(body, ProductConstants.LowerCase.STOCKS, null),
                     JSONUtils.optLong(body, ProductConstants.LowerCase.PRICE, null), null, null, null, null);
@@ -434,14 +442,13 @@ public class ProductController extends APIController {
     public ResponseEntity<String> getProductVariations() {
         SuccessResponse successResponse = new SuccessResponse();
         try {
+            DbFilter dbFilter = new DbFilter();
+            dbFilter.setFormat(DATAFORMAT.JSON);
             ProductCRUD productCRUD = getProductCRUD();
+            productCRUD.setDbFilter(dbFilter);
             JSONObject data = productCRUD.getProductVariantDetailsForUI(currentProduct.getId(), getCurrentCategory());
             successResponse = new SuccessResponse();
-            if (data.isEmpty()) {
-                successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
-            } else {
-                successResponse.setApiResponseStatus(HttpStatus.OK);
-            }
+            successResponse.setApiResponseStatus(HttpStatus.OK);
             successResponse.setResponseData(data);
             return successResponse.getResponse();
         } catch (Exception ex) {
@@ -465,7 +472,7 @@ public class ProductController extends APIController {
                 throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_BODY_FOR_CREATE_VARIATION);
             }
             VARIANT_TYPE variantType = VARIANT_TYPE
-                    .valueOf(bodyData.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
+                    .getEnumValueFromGivenString(bodyData.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
 
             productCRUD.createProductVariant(currentProduct,
                     (Product) validationResult.get(ProductConstants.LowerCase.PRODUCT), variantType);
@@ -490,13 +497,13 @@ public class ProductController extends APIController {
         try {
             JSONObject body = JSONUtils.convertMapToJSONObject(bodyData);
             ProductCRUD productCRUD = getProductCRUD();
-            JSONObject validationResult = productCRUD.checkBodyOfCreateVariation(body);
+            JSONObject validationResult = productCRUD.checkBodyOfDeleteVariation(body);
             if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
                 throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_BODY_FOR_DELETE_VARIATION);
             }
             VARIANT_TYPE variantType = VARIANT_TYPE
-                    .valueOf(bodyData.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
+                    .getEnumValueFromGivenString(bodyData.get(ProductConstants.SnakeCase.VARIANT_TYPE).toString());
 
             productCRUD.deleteProductVariant(currentProduct, variantType);
             successResponse = new SuccessResponse();

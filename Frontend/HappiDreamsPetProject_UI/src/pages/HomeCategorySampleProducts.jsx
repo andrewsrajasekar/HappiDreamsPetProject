@@ -32,10 +32,10 @@ function HomeCategorySampleProducts({categorySampleProducts, showManipulateButto
     return(
       <div className={`${mdwidthClassName} sm:mb-0 mb-6`} key={`category_sample_product_${index}`} id={`category_sample_product_${index}`} style={{flex: "0 0 calc(33.33% - 2rem)", margin: "4px"}}>
         <div className="rounded-lg h-64 overflow-hidden">
-          <img alt="content" className="object-cover object-center h-full w-full" src={`${element["image_url"]}`} />
+          <img alt="content" className="object-cover object-center h-full w-full" src={`${element.hasOwnProperty("thumbnailImageUrl") ? element.thumbnailImageUrl : "https://dummyimage.com/1203x503" }`} />
         </div>
-        <h2 className="text-xl font-medium title-font text-gray-900 mt-5">{element["name"]}</h2>
-        <p className="text-base leading-relaxed mt-2">{element["description"]}</p>
+        <h2 className="text-xl font-medium title-font text-gray-900 mt-5">{element.name}</h2>
+        <p className="text-base leading-relaxed mt-2">{element.description}</p>
       </div>
     )
   });
@@ -77,11 +77,12 @@ return(
       </div>
       <div className="flex flex-row justify-center items-center py-6 mb-10">
         <button disabled={currentCategorySampleProductIndex <= 0} className={`relative transition-all ease-in-out duration-300 w-10 h-10 bg-[#5A5CC9] text-white opacity-100 ${ ( currentCategorySampleProductIndex <= 0 ) ? "opacity-50 cursor-not-allowed" : ""}`} onClick={onPrevCategoryClick}><i className="bx bx-chevron-left text-2xl"></i></button>
-        <span className="text-gray-900 font-medium title-font text-2xl mx-2.5">{currentCategorySampleProduct["animalType"]} - {currentCategorySampleProduct["categoryName"]}</span>
+        <span className="text-gray-900 font-medium title-font text-2xl mx-2.5">{currentCategorySampleProduct.category.animal.name} - {currentCategorySampleProduct.category.name}</span>
         {showManipulateButtons !== undefined && showManipulateButtons && 
           <div>
-            <span className='text-purple-600 cursor-pointer underline mr-2' onClick={() => {handleEditSection(currentCategorySampleProduct.products, currentCategorySampleProduct.animalType, currentCategorySampleProduct.categoryName)}}>Edit this section</span>
-            { categorySampleProductsSize > 1 && <span className='text-purple-600 cursor-pointer underline mr-2 disabled:opacity-25 disabled:cursor-not-allowed' onClick={() => {handleDeleteSection(currentCategorySampleProduct.id, currentCategorySampleProduct.animalType, currentCategorySampleProduct.categoryName)}} disabled={categorySampleProductsSize <= 1}>Delete this section</span>}
+            <span className='text-purple-600 cursor-pointer underline mr-2' onClick={() => {handleEditSection(currentCategorySampleProduct.products, currentCategorySampleProduct.category.animal, currentCategorySampleProduct.category)}}>Edit this section</span>
+            {/* { categorySampleProductsSize > 1 && <span className='text-purple-600 cursor-pointer underline mr-2 disabled:opacity-25 disabled:cursor-not-allowed' onClick={() => {handleDeleteSection(currentCategorySampleProduct.id, currentCategorySampleProduct.animalType, currentCategorySampleProduct.categoryName)}} disabled={categorySampleProductsSize <= 1}>Delete this section</span>} */}
+            <span className='text-purple-600 cursor-pointer underline mr-2 disabled:opacity-25 disabled:cursor-not-allowed' onClick={() => {handleDeleteSection(currentCategorySampleProduct.products, currentCategorySampleProduct.category.animal, currentCategorySampleProduct.category)}}>Delete this section</span>
           </div>
         }
         <button disabled={currentCategorySampleProductIndex >= (categorySampleProductsSize - 1)} className={`relative transition-all ease-in-out duration-300 w-10 h-10 bg-[#5A5CC9] text-white opacity-100 ${ ( currentCategorySampleProductIndex >= (categorySampleProductsSize - 1) ) ? "opacity-50 cursor-not-allowed" : ""}`} onClick={onNextCategoryClick}><i className="bx bx-chevron-right text-2xl"></i></button>

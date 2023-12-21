@@ -31,12 +31,14 @@ import com.happidreampets.app.constants.TopProductsConstants;
 import com.happidreampets.app.constants.TopProductsConstants.SnakeCase;
 import com.happidreampets.app.database.crud.AnimalCRUD;
 import com.happidreampets.app.database.crud.CategoryCRUD;
+import com.happidreampets.app.database.crud.PromotionsCRUD;
 import com.happidreampets.app.database.crud.TopCategoriesCRUD;
 import com.happidreampets.app.database.crud.TopProductsCRUD;
 import com.happidreampets.app.database.model.Animal;
 import com.happidreampets.app.database.model.Animal.ANIMALCOLUMN;
 import com.happidreampets.app.database.model.Category;
 import com.happidreampets.app.database.model.Product;
+import com.happidreampets.app.database.model.Promotions;
 import com.happidreampets.app.database.model.Category.CATEGORYCOLUMN;
 import com.happidreampets.app.database.model.TopProducts;
 import com.happidreampets.app.database.utils.DbFilter;
@@ -93,6 +95,70 @@ public class OtherDataController extends APIController {
         return failureResponse.getResponse();
     }
 
+    @RequestMapping(value = "/promotions", method = RequestMethod.GET)
+    public ResponseEntity<String> getPromotions() {
+        try {
+            PromotionsCRUD promotionsCRUD = getPromotionsCRUD();
+            JSONObject data = promotionsCRUD.getAllPromotionDetails(Boolean.TRUE);
+            SuccessResponse successResponse = new SuccessResponse();
+            successResponse.setApiResponseStatus(HttpStatus.OK);
+            if (data.has(ProductConstants.LowerCase.DATA)
+                    && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
+                successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
+            } else {
+                successResponse.setResponseData(data);
+            }
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/promotions", method = RequestMethod.POST)
+    public ResponseEntity<String> createPromotions(@RequestPart(required = true) MultipartFile promotionImage) {
+        try {
+            PromotionsCRUD promotionsCRUD = getPromotionsCRUD();
+            String originalFilename = promotionImage.getOriginalFilename();
+            if (!promotionsCRUD.isValidFileExtension(originalFilename)) {
+                throw new Exception(ProductConstants.ExceptionMessageCase.INVALID_IMAGE_FORMAT);
+            }
+            Promotions promotion = promotionsCRUD.createPromotionAndInsertImage(promotionImage.getInputStream(),
+                    promotionsCRUD.getExtension(originalFilename));
+            SuccessResponse successResponse = new SuccessResponse();
+            successResponse.setApiResponseStatus(HttpStatus.CREATED);
+            successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, promotion.getId()));
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/promotion/{promotionId}", method = RequestMethod.DELETE)
+    public ResponseEntity<String> deletePromotion(@PathVariable("promotionId") Long promotionId) {
+        try {
+            PromotionsCRUD promotionsCRUD = getPromotionsCRUD();
+            Boolean isDeleted = promotionsCRUD.deletePromotion(promotionId);
+            SuccessResponse successResponse = new SuccessResponse();
+            if (!isDeleted) {
+                throw new Exception();
+            } else {
+                successResponse.setApiResponseStatus(HttpStatus.OK);
+            }
+            successResponse.setData(new JSONObject().put(ProductConstants.LowerCase.ID, promotionId));
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
+            return otherDataControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
     @RequestMapping(value = "/top-products", method = RequestMethod.GET)
     public ResponseEntity<String> getTopProducts() {
         try {
@@ -104,7 +170,7 @@ public class OtherDataController extends APIController {
                     && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
                 successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
             } else {
-                successResponse.setData(data);
+                successResponse.setResponseData(data);
             }
             return successResponse.getResponse();
         } catch (Exception ex) {
@@ -172,12 +238,14 @@ public class OtherDataController extends APIController {
 
     @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
     @RequestMapping(value = "/top-products", method = RequestMethod.POST)
-    public ResponseEntity<String> addTopProducts(@RequestBody List<Map<String, Object>> bodyData) {
+    public ResponseEntity<String> clearAllAndAddTopProducts(@RequestBody List<Map<String, Object>> bodyData) {
         SuccessResponse successResponse = new SuccessResponse();
         JSONObject errorData = new JSONObject();
         try {
-            JSONArray body = JSONUtils.convertListToJSONArray(bodyData);
             TopProductsCRUD topProductsCRUD = getTopProductsCRUD();
+            JSONArray body = JSONUtils
+                    .convertListToJSONArray(bodyData);
+
             JSONObject validationResult = topProductsCRUD.validateBodyDataForBulkCreate(body);
             if (!validationResult.getBoolean(ProductConstants.LowerCase.SUCCESS)) {
                 errorData = validationResult.getJSONObject(ProductConstants.LowerCase.DATA);
@@ -222,7 +290,10 @@ public class OtherDataController extends APIController {
     @RequestMapping(value = "/top-categories", method = RequestMethod.GET)
     public ResponseEntity<String> getTopCategories() {
         try {
+            DbFilter dbFilter = new DbFilter();
+            dbFilter.setFormat(DATAFORMAT.JSON);
             TopCategoriesCRUD topCategoriesCRUD = getTopCategoriesCRUD();
+            topCategoriesCRUD.setDbFilter(dbFilter);
             JSONObject data = topCategoriesCRUD.getTopCategoriesDetails();
             SuccessResponse successResponse = new SuccessResponse();
             successResponse.setApiResponseStatus(HttpStatus.OK);
@@ -230,7 +301,7 @@ public class OtherDataController extends APIController {
                     && data.getJSONArray(ProductConstants.LowerCase.DATA).isEmpty()) {
                 successResponse.setApiResponseStatus(HttpStatus.NO_CONTENT);
             } else {
-                successResponse.setData(data);
+                successResponse.setResponseData(data);
             }
             return successResponse.getResponse();
         } catch (Exception ex) {
@@ -278,14 +349,17 @@ public class OtherDataController extends APIController {
 
             List<Long> productIds = topCategoriesCRUD.checkAndFetchBodyToProductIdList(body);
 
-            topCategoriesCRUD.bulkCreateForCategory(currentCategory, productIds);
+            topCategoriesCRUD.bulkCreateForCategory(getCategoryCRUD().getCategoryDetail(
+                    Long.valueOf("" + body.get(AnimalConstants.SnakeCase.ANIMAL_ID)),
+                    Long.valueOf("" + body.get(CategoryConstants.SnakeCase.CATEGORY_ID))), productIds);
 
             successResponse.setApiResponseStatus(HttpStatus.CREATED);
             return successResponse.getResponse();
         } catch (Exception ex) {
             if (ex.getMessage() != null) {
-                if (ex.getMessage().split(ControllerConstants.SpecialCharacter.UNDERSCORE
-                        + ControllerConstants.CapitalizationCase.BYPASS_EXCEPTION).length >= 2) {
+                if (ex.getMessage().split(ControllerConstants.SpecialCharacter.UNDERSCORE).length >= 2 &&
+                        ex.getMessage().split(ControllerConstants.SpecialCharacter.UNDERSCORE)[1]
+                                .equals(ControllerConstants.CapitalizationCase.BYPASS_EXCEPTION)) {
                     errorData = new JSONObject()
                             .put(ProductConstants.LowerCase.FIELD,
                                     ProductConstants.LowerCase.PRODUCTS)
@@ -300,6 +374,24 @@ public class OtherDataController extends APIController {
             if (!errorData.isEmpty()) {
                 otherDataControllerExceptions.setData(errorData);
             }
+            return otherDataControllerExceptions.returnResponseBasedOnException();
+        }
+    }
+
+    @AccessLevel({ AccessLevel.AccessEnum.ADMIN })
+    @RequestMapping(value = "/top-category/{categoryId}/product/{productId}", method = RequestMethod.POST)
+    public ResponseEntity<String> addATopCategoryProducts(@PathVariable("productId") Long productId) {
+        SuccessResponse successResponse = new SuccessResponse();
+        try {
+            TopCategoriesCRUD topCategoryCRUD = getTopCategoriesCRUD();
+
+            topCategoryCRUD.singleCreateForCategory(currentCategory, productId);
+
+            successResponse.setApiResponseStatus(HttpStatus.CREATED);
+            return successResponse.getResponse();
+        } catch (Exception ex) {
+            OtherDataControllerExceptions otherDataControllerExceptions = new OtherDataControllerExceptions();
+            otherDataControllerExceptions.setException(ex);
             return otherDataControllerExceptions.returnResponseBasedOnException();
         }
     }

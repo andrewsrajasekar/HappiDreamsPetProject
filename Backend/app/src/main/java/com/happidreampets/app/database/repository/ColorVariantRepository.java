@@ -28,6 +28,11 @@ public interface ColorVariantRepository extends CrudRepository<ColorVariant, Lon
 
     List<ColorVariant> findAllByVariantId(Long variantId);
 
+    @Query("SELECT c FROM ColorVariant c WHERE c.variantId = :variantId AND c.product.id NOT IN :productIds")
+    List<ColorVariant> findAllByVariantIdAndNotInProductIds(
+            @Param("variantId") Long variantId,
+            @Param("productIds") List<Long> productIds);
+
     @Query("SELECT MAX(cv.variantId) FROM ColorVariant cv")
     Long findMaxVariantId();
 }

@@ -4,26 +4,42 @@ import Modal from "../../Modal";
 import MainPageCarousel from "../../MainPageCarousel";
 import React from "react";
 import ReactTooltip from 'react-tooltip'
+import { addPromotions, deletePromotion, getPromotions } from "../../../services/ApiClient";
+import UINotification from "../../UINotification";
 
 function MainBoard(){
-    const imagesArray = [
-        {
-            "id": 1,
-            "url": "https://dummyimage.com/1203x503"
-        },
-        {
-            "id": 2,
-            "url": "https://dummyimage.com/1203x503"
-        },
-        {
-            "id": 3,
-            "url": "https://dummyimage.com/1203x503"
-        }
-    ];
-    const [nextImageId, setNextImageId] = useState(4);
-    const [images, setImages] = useState(imagesArray);
+    const [images, setImages] = useState([]);
     const [showPreviewModal, setShowPreviewModal] = useState(false);
+    // const [disableSaveButton, setDisableSaveButton] = useState(true);
+    const [disablePreviewButton, setDisablePreviewButton] = useState(true);
     const maxNumberOfImages = 5;
+
+    const fetchImages = async () => {
+      const response = await getPromotions();
+      if(response.isSuccess){
+        if(Array.isArray(response.successResponse.data.data)){
+          if(response.successResponse.data.data.length > 0){
+            let imageApiData = response.successResponse.data.data;
+            imageApiData.forEach((data) => {
+              data.url = data.imageUrl.replaceAll("static/", "");
+              data.url = "assets/" + data.url;
+              data.imageUrl = data.url;
+            })
+            setImages(imageApiData);
+            setDisablePreviewButton(false);
+          }else{
+            setImages([]);
+            setDisablePreviewButton(true);
+          }
+        }
+      }else{
+        UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+      }
+  };
+
+    useEffect(() => {
+      fetchImages();
+    }, [])
 
     useEffect(() => {
       if(images.length >= 5){
@@ -31,29 +47,29 @@ function MainBoard(){
       }
     }, [images.length])
   
-    const handleDeleteImage = (imageId) => {
-      setImages(images.filter((image) => image.id !== imageId));
+    const handleDeleteImage = async (imageId) => {
+      //setImages(images.filter((image) => image.id !== imageId));
+      const deleteImageResponse = await deletePromotion(imageId);
+      if(deleteImageResponse.isSuccess){
+        UINotification({ message: "Promotion Deleted Successfully", type: "Success" });
+        fetchImages();    
+      }else{
+        UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+      }
     };
 
     useEffect(() => {
       ReactTooltip.rebuild();
     }, []);
  
-    const handleImageUpload = (newImage) => {
-      // Perform image upload and store logic here
-      // Example: save the image to the state
-      const image = {
-        id: nextImageId,
-        name: newImage.name,
-        url: URL.createObjectURL(newImage),
-      };
-      setImages((prevImages) => [...prevImages, image]);
-      setNextImageId(nextImageId+1);
-    };
-  
-    const handleSaveProgress = () => {
-      // Save progress logic here
-      console.log('Progress saved!');
+    const handleImageUpload = async(newImage) => {
+      const imageUpload = await addPromotions(newImage);
+      if(imageUpload.isSuccess){
+        UINotification({ message: "Promotion Added Successfully", type: "Success" });
+        fetchImages();
+      }else{
+        UINotification({ message: "Issue Occured, Kindly try again later.", type: "Error" });
+      }
     };
   
     const handleTogglePreviewModal = () => {
@@ -80,8 +96,9 @@ function MainBoard(){
               
         {/* Upload Image Button */}
         <button
-          className="bg-blue-500 w-36 hover:bg-blue-700 items-start text-white font-bold py-2 px-4 rounded mt-4"
+          className="bg-blue-500 w-36 hover:bg-blue-700 items-start text-white font-bold py-2 px-4 rounded mt-4 disabled:opacity-25 disabled:cursor-not-allowed"
           onClick={handleTogglePreviewModal}
+          disabled={disablePreviewButton}
         >
           Show Preview
         </button>
@@ -111,12 +128,13 @@ function MainBoard(){
         )}
   
         {/* Save Progress Button */}
-        <button
-          className="bg-green-500 w-36 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4"
+        {/* <button
+          className="bg-green-500 w-36 hover:bg-green-700 text-white font-bold py-2 px-4 rounded mt-4 disabled:opacity-25 disabled:cursor-not-allowed"
           onClick={handleSaveProgress}
+          disabled={disableSaveButton}
         >
           Save
-        </button>
+        </button> */}
         </div>
       </div>
     );
@@ -126,9 +144,10 @@ function MainBoard(){
 function ImageUploader({ onImageUpload }) {
   const fileInputRef = useRef(null);
 
-  const handleFileSelect = (event) => {
+  const handleFileSelect = async (event) => {
     const file = event.target.files[0];
-    onImageUpload(file);
+    await onImageUpload(file);
+    fileInputRef.current.value = '';
   };
 
 

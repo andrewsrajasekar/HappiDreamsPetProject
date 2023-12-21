@@ -17,6 +17,8 @@ import com.happidreampets.app.database.repository.ColorVariantRepository;
 import com.happidreampets.app.database.utils.DbFilter;
 import com.happidreampets.app.database.utils.DbFilter.DATAFORMAT;
 
+import jakarta.transaction.Transactional;
+
 @Component
 public class ColorVariantCRUD {
 
@@ -57,12 +59,23 @@ public class ColorVariantCRUD {
         return responseData;
     }
 
-    public JSONObject getColorVariantDetails(Long variantId) {
+    public JSONObject getColorVariantDetailsInJSONWithExcludeProductList(Long variantId,
+            List<Long> excludedProductIds) {
         JSONObject colorVariantData = new JSONObject();
-        List<ColorVariant> colorVariantPage = colorVariantRepository.findAllByVariantId(variantId);
+        List<ColorVariant> colorVariantList = colorVariantRepository.findAllByVariantIdAndNotInProductIds(variantId,
+                excludedProductIds);
         colorVariantData.put(ProductConstants.LowerCase.DATA,
-                getDataInRequiredFormat(colorVariantPage).get(ProductConstants.LowerCase.DATA));
+                getDataInRequiredFormat(colorVariantList).get(ProductConstants.LowerCase.DATA));
         return colorVariantData;
+    }
+
+    public List<ColorVariant> getColorVariantProductDetailsWithExcludeProductList(Long variantId,
+            List<Long> excludedProductIds) {
+        return colorVariantRepository.findAllByVariantIdAndNotInProductIds(variantId, excludedProductIds);
+    }
+
+    public List<ColorVariant> getColorVariantProductDetails(Long variantId) {
+        return colorVariantRepository.findAllByVariantId(variantId);
     }
 
     public ColorVariant createColorVariant(Product product, Long variantId) throws Exception {
@@ -85,18 +98,26 @@ public class ColorVariantCRUD {
         }
         ColorVariant colorVariant = new ColorVariant();
         colorVariant.setProduct(product);
-        colorVariant.setVariantId(colorVariantRepository.findMaxVariantId() + 1);
+        colorVariant.setVariantId(
+                (colorVariantRepository.findMaxVariantId() == null ? 0 : colorVariantRepository.findMaxVariantId())
+                        + 1);
         colorVariant.setAddedTime(System.currentTimeMillis());
 
         return colorVariantRepository.save(colorVariant);
     }
 
+    @Transactional
     public Boolean deleteColorVariant(Product product, Long variantId) throws Exception {
         ColorVariant existingColorVariant = colorVariantRepository.findByProductAndVariantId(product, variantId);
         if (existingColorVariant == null) {
             throw new Exception(ExceptionMessageCase.VARIANT_NOT_FOUND);
         }
-        colorVariantRepository.deleteByProductAndVariantId(product, variantId);
+        try {
+            colorVariantRepository.deleteByProductAndVariantId(product, variantId);
+        } catch (Exception ex) {
+            throw ex;
+        }
+
         return true;
     }
 }

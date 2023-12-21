@@ -68,34 +68,50 @@ public interface ProductRepository extends CrudRepository<Product, Long> {
        Product findProductForUIByCategory(@Param("id") Long id, @Param("category") Category category,
                      @Param("skipVisibility") boolean skipVisibility);
 
-       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name )" +
+       @Query("SELECT DISTINCT new com.happidreampets.app.database.model.Product(p.id, p.name) " +
                      "FROM Product p " +
-                     "WHERE p.id NOT IN (SELECT w.product.id FROM WeightVariant w) " +
-                     "AND p.weight <> null " +
-                     "AND p.weightUnits <> null " +
+                     "LEFT JOIN WeightVariant w ON p.id = w.product.id " +
+                     "WHERE (w.product.id IS NULL OR " +
+                     "       w.variantId IN (SELECT wv.variantId FROM WeightVariant wv GROUP BY wv.variantId HAVING COUNT(wv.id) < :maxWeightVariant)) "
+                     +
+                     "AND p.weight IS NOT NULL " +
+                     "AND (p.weightUnits IS NOT NULL AND p.weightUnits != com.happidreampets.app.database.model.Product$WEIGHT_UNITS.NONE) "
+                     +
                      "AND p.category = :category " +
                      "AND p.toBeDeleted = false " +
                      "AND (:skipVisibility = true OR p.isVisible = true)")
-       List<Product> findProductsNotInWeightVariant(@Param("category") Category category,
+       List<Product> findProductsNotInWeightVariantOrUnderLimit(
+                     @Param("maxWeightVariant") int maxWeightVariant,
+                     @Param("category") Category category,
                      @Param("skipVisibility") boolean skipVisibility);
 
-       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name )" +
+       @Query("SELECT DISTINCT new com.happidreampets.app.database.model.Product(p.id, p.name) " +
                      "FROM Product p " +
-                     "WHERE p.id NOT IN (SELECT s.product.id FROM SizeVariant s) " +
-                     "AND p.size <> null " +
+                     "LEFT JOIN SizeVariant s ON p.id = s.product.id " +
+                     "WHERE (s.product.id IS NULL OR " +
+                     "       s.variantId IN (SELECT sv.variantId FROM SizeVariant sv GROUP BY sv.variantId HAVING COUNT(sv.id) < :maxSizeVariant)) "
+                     +
+                     "AND p.size IS NOT NULL " +
                      "AND p.category = :category " +
                      "AND p.toBeDeleted = false " +
                      "AND (:skipVisibility = true OR p.isVisible = true)")
-       List<Product> findProductsNotInSizeVariant(@Param("category") Category category,
+       List<Product> findProductsNotInSizeVariantOrUnderLimit(
+                     @Param("maxSizeVariant") int maxSizeVariant,
+                     @Param("category") Category category,
                      @Param("skipVisibility") boolean skipVisibility);
 
-       @Query("SELECT new com.happidreampets.app.database.model.Product(p.id, p.name )" +
+       @Query("SELECT DISTINCT new com.happidreampets.app.database.model.Product(p.id, p.name) " +
                      "FROM Product p " +
-                     "WHERE p.id NOT IN (SELECT c.product.id FROM ColorVariant c) " +
-                     "AND p.color <> null " +
+                     "LEFT JOIN ColorVariant c ON p.id = c.product.id " +
+                     "WHERE (c.product.id IS NULL OR " +
+                     "       c.variantId IN (SELECT cv.variantId FROM ColorVariant cv GROUP BY cv.variantId HAVING COUNT(cv.id) < :maxColorVariant)) "
+                     +
+                     "AND p.color IS NOT NULL " +
                      "AND p.category = :category " +
                      "AND p.toBeDeleted = false " +
                      "AND (:skipVisibility = true OR p.isVisible = true)")
-       List<Product> findProductsNotInColorVariant(@Param("category") Category category,
+       List<Product> findProductsNotInColorVariantOrUnderLimit(
+                     @Param("maxColorVariant") int maxColorVariant,
+                     @Param("category") Category category,
                      @Param("skipVisibility") boolean skipVisibility);
 }

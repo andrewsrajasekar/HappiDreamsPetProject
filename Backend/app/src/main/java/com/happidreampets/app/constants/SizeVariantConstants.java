@@ -34,8 +34,10 @@ public class SizeVariantConstants {
     }
 
     public class ExceptionMessageCase {
+        public static final String MAX_SIZE_VARIANT_ASSOCIATED = "Maximum Size Variant Associated";
         public static final String SIZE_VARIANT_ADDED_TO_OTHER_PRODUCT = "Size Variant added to other product";
         public static final String ALREADY_SIZE_VARIANT_ADDED = "Already Size Variant Added";
+        public static final String NO_SIZE_DATA_PRESENT_IN_THE_PRODUCT = "No Size Data present in the Product";
     }
 
     public class OtherCase {

@@ -19,9 +19,9 @@ public class SecurityConfig {
         return http.build();
     }
 
-    @Bean
-    public RequestMappingHandlerMapping requestMappingHandlerMapping() {
-        return new RequestMappingHandlerMapping();
-    }
+    // @Bean
+    // public RequestMappingHandlerMapping requestMappingHandlerMapping() {
+    // return new RequestMappingHandlerMapping();
+    // }
 
 }

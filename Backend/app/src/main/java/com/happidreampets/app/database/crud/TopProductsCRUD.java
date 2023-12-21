@@ -16,7 +16,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Component;
 
+import com.happidreampets.app.constants.AnimalConstants;
+import com.happidreampets.app.constants.CategoryConstants;
 import com.happidreampets.app.constants.ProductConstants;
+import com.happidreampets.app.constants.ProductConstants.ExceptionMessageCase;
+import com.happidreampets.app.constants.ProductConstants.LoggerCase;
+import com.happidreampets.app.constants.ProductConstants.LowerCase;
 import com.happidreampets.app.constants.TopCategoriesConstants;
 import com.happidreampets.app.constants.TopProductsConstants.MessageCase;
 import com.happidreampets.app.constants.TopProductsConstants.SnakeCase;
@@ -36,6 +41,12 @@ public class TopProductsCRUD {
 
     @Autowired
     private ProductCRUD productCRUD;
+
+    @Autowired
+    private AnimalCRUD animalCRUD;
+
+    @Autowired
+    private CategoryCRUD categoryCRUD;
 
     @Value("${top.products.limit}")
     Integer topProductsLimit;
@@ -238,31 +249,98 @@ public class TopProductsCRUD {
         String missingField = ProductConstants.LowerCase.EMPTY_QUOTES;
         String message = ProductConstants.MessageCase.MANDATORY_FIELD_ARG0_IS_MISSING;
         String code = ERROR_CODES.MANDATORY_MISSING.name();
-        if (!body.has(ProductConstants.SnakeCase.PRODUCT_ID)) {
+        if (!body.has(AnimalConstants.SnakeCase.ANIMAL_ID)) {
+            missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+            message = message.replace(LoggerCase.ARG0, AnimalConstants.SnakeCase.ANIMAL_ID);
+        } else if (!body.has(CategoryConstants.SnakeCase.CATEGORY_ID)) {
+            missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+            message = message.replace(LoggerCase.ARG0, CategoryConstants.SnakeCase.CATEGORY_ID);
+        } else if (!body.has(ProductConstants.SnakeCase.PRODUCT_ID)) {
             missingField = ProductConstants.SnakeCase.PRODUCT_ID;
             message = message.replace(ProductConstants.LoggerCase.ARG0, ProductConstants.SnakeCase.PRODUCT_ID);
         } else if (!body.has(SnakeCase.ORDER_NUMBER)) {
             missingField = SnakeCase.ORDER_NUMBER;
             message = message.replace(ProductConstants.LoggerCase.ARG0, SnakeCase.ORDER_NUMBER);
         } else {
-            if (body.get(SnakeCase.ORDER_NUMBER) instanceof Long) {
-                code = null;
-                message = ProductConstants.MessageCase.THE_VALUE_IS_TOO_HIGH;
-                missingField = SnakeCase.ORDER_NUMBER;
-            } else if (!(body.get(SnakeCase.ORDER_NUMBER) instanceof Integer)) {
-                code = null;
-                message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
-                missingField = SnakeCase.ORDER_NUMBER;
-            } else if (!(body.get(ProductConstants.SnakeCase.PRODUCT_ID) instanceof Long)) {
-                code = null;
-                message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
-                missingField = ProductConstants.SnakeCase.PRODUCT_ID;
-            } else if (productCRUD
-                    .getProduct(Long.valueOf(body.get(ProductConstants.SnakeCase.PRODUCT_ID).toString())) == null) {
-                code = null;
-                message = ProductConstants.ExceptionMessageCase.INVALID_PRODUCT_ID;
-                missingField = ProductConstants.SnakeCase.PRODUCT_ID;
+            Boolean isError = false;
+
+            if (body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Long
+                    || body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Integer) {
+                Long animalId = Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString());
+                if (animalCRUD.getAnimal(animalId) == null) {
+                    code = null;
+                    message = AnimalConstants.ExceptionMessageCase.INVALID_ANIMAL_ID;
+                    missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+                    isError = true;
+                }
             } else {
+                code = null;
+                message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+                isError = true;
+            }
+
+            if (!isError) {
+                if (body.get(CategoryConstants.SnakeCase.CATEGORY_ID) instanceof Long
+                        || body.get(CategoryConstants.SnakeCase.CATEGORY_ID) instanceof Integer) {
+                    Long categoryId = Long.parseLong(body.get(CategoryConstants.SnakeCase.CATEGORY_ID).toString());
+                    if (categoryCRUD.getCategoryDetail(
+                            animalCRUD.getAnimal(
+                                    Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString())),
+                            categoryId) == null) {
+                        code = null;
+                        message = CategoryConstants.ExceptionMessageCase.INVALID_CATEGORY_ID;
+                        missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+                        isError = true;
+                    }
+                } else {
+                    code = null;
+                    message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                    missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+                    isError = true;
+                }
+            }
+
+            if (!isError) {
+                if (body.get(ProductConstants.SnakeCase.PRODUCT_ID) instanceof Long
+                        || body.get(ProductConstants.SnakeCase.PRODUCT_ID) instanceof Integer) {
+                    Long productId = Long.parseLong(body.get(ProductConstants.SnakeCase.PRODUCT_ID).toString());
+                    Long categoryId = Long.parseLong(body.get(CategoryConstants.SnakeCase.CATEGORY_ID).toString());
+                    Product product = productCRUD.getProduct(productId, categoryCRUD.getCategoryDetail(
+                            animalCRUD.getAnimal(
+                                    Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString())),
+                            categoryId));
+                    if (product == null) {
+                        code = null;
+                        message = ExceptionMessageCase.INVALID_PRODUCT_ID;
+                        missingField = ProductConstants.SnakeCase.PRODUCT_ID;
+                        isError = true;
+                    } else {
+                        response.put(LowerCase.PRODUCT, product);
+                    }
+                } else {
+                    code = null;
+                    message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                    missingField = ProductConstants.SnakeCase.PRODUCT_ID;
+                    isError = true;
+                }
+            }
+            if (!isError) {
+                if (body.get(SnakeCase.ORDER_NUMBER) instanceof Long) {
+                    code = null;
+                    message = ProductConstants.MessageCase.THE_VALUE_IS_TOO_HIGH;
+                    missingField = SnakeCase.ORDER_NUMBER;
+                } else if (!(body.get(SnakeCase.ORDER_NUMBER) instanceof Integer)) {
+                    code = null;
+                    message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                    missingField = SnakeCase.ORDER_NUMBER;
+                } else if (!(body.get(ProductConstants.SnakeCase.PRODUCT_ID) instanceof Long)) {
+                    code = null;
+                    message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                    missingField = ProductConstants.SnakeCase.PRODUCT_ID;
+                }
+            }
+            if (!isError) {
                 isSuccess = Boolean.TRUE;
             }
 
@@ -288,31 +366,98 @@ public class TopProductsCRUD {
         while (bodyArrayIter.hasNext()) {
             JSONObject body = (JSONObject) bodyArrayIter.next();
             index = index + 1;
-            if (!body.has(ProductConstants.SnakeCase.PRODUCT_ID)) {
+            if (!body.has(AnimalConstants.SnakeCase.ANIMAL_ID)) {
+                missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+                message = message.replace(LoggerCase.ARG0, AnimalConstants.SnakeCase.ANIMAL_ID);
+            } else if (!body.has(CategoryConstants.SnakeCase.CATEGORY_ID)) {
+                missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+                message = message.replace(LoggerCase.ARG0, CategoryConstants.SnakeCase.CATEGORY_ID);
+            } else if (!body.has(ProductConstants.SnakeCase.PRODUCT_ID)) {
                 missingField = ProductConstants.SnakeCase.PRODUCT_ID;
                 message = message.replace(ProductConstants.LoggerCase.ARG0, ProductConstants.SnakeCase.PRODUCT_ID);
             } else if (!body.has(SnakeCase.ORDER_NUMBER)) {
                 missingField = SnakeCase.ORDER_NUMBER;
                 message = message.replace(ProductConstants.LoggerCase.ARG0, SnakeCase.ORDER_NUMBER);
             } else {
-                if (body.get(SnakeCase.ORDER_NUMBER) instanceof Long) {
-                    code = null;
-                    message = ProductConstants.MessageCase.THE_VALUE_IS_TOO_HIGH;
-                    missingField = SnakeCase.ORDER_NUMBER;
-                } else if (!(body.get(SnakeCase.ORDER_NUMBER) instanceof Integer)) {
-                    code = null;
-                    message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
-                    missingField = SnakeCase.ORDER_NUMBER;
-                } else if (!(body.get(ProductConstants.SnakeCase.PRODUCT_ID) instanceof Long)) {
-                    code = null;
-                    message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
-                    missingField = ProductConstants.SnakeCase.PRODUCT_ID;
-                } else if (productCRUD
-                        .getProduct(Long.valueOf(body.get(ProductConstants.SnakeCase.PRODUCT_ID).toString())) == null) {
-                    code = null;
-                    message = ProductConstants.ExceptionMessageCase.INVALID_PRODUCT_ID;
-                    missingField = ProductConstants.SnakeCase.PRODUCT_ID;
+                Boolean isError = false;
+
+                if (body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Long
+                        || body.get(AnimalConstants.SnakeCase.ANIMAL_ID) instanceof Integer) {
+                    Long animalId = Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString());
+                    if (animalCRUD.getAnimal(animalId) == null) {
+                        code = null;
+                        message = AnimalConstants.ExceptionMessageCase.INVALID_ANIMAL_ID;
+                        missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+                        isError = true;
+                    }
                 } else {
+                    code = null;
+                    message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                    missingField = AnimalConstants.SnakeCase.ANIMAL_ID;
+                    isError = true;
+                }
+
+                if (!isError) {
+                    if (body.get(CategoryConstants.SnakeCase.CATEGORY_ID) instanceof Long
+                            || body.get(CategoryConstants.SnakeCase.CATEGORY_ID) instanceof Integer) {
+                        Long categoryId = Long.parseLong(body.get(CategoryConstants.SnakeCase.CATEGORY_ID).toString());
+                        if (categoryCRUD.getCategoryDetail(
+                                animalCRUD.getAnimal(
+                                        Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString())),
+                                categoryId) == null) {
+                            code = null;
+                            message = CategoryConstants.ExceptionMessageCase.INVALID_CATEGORY_ID;
+                            missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+                            isError = true;
+                        }
+                    } else {
+                        code = null;
+                        message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                        missingField = CategoryConstants.SnakeCase.CATEGORY_ID;
+                        isError = true;
+                    }
+                }
+
+                if (!isError) {
+                    if (body.get(ProductConstants.SnakeCase.PRODUCT_ID) instanceof Long
+                            || body.get(ProductConstants.SnakeCase.PRODUCT_ID) instanceof Integer) {
+                        Long productId = Long.parseLong(body.get(ProductConstants.SnakeCase.PRODUCT_ID).toString());
+                        Long categoryId = Long.parseLong(body.get(CategoryConstants.SnakeCase.CATEGORY_ID).toString());
+                        Product product = productCRUD.getProduct(productId, categoryCRUD.getCategoryDetail(
+                                animalCRUD.getAnimal(
+                                        Long.parseLong(body.get(AnimalConstants.SnakeCase.ANIMAL_ID).toString())),
+                                categoryId));
+                        if (product == null) {
+                            code = null;
+                            message = ExceptionMessageCase.INVALID_PRODUCT_ID;
+                            missingField = ProductConstants.SnakeCase.PRODUCT_ID;
+                            isError = true;
+                        } else {
+                            response.put(LowerCase.PRODUCT, product);
+                        }
+                    } else {
+                        code = null;
+                        message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                        missingField = ProductConstants.SnakeCase.PRODUCT_ID;
+                        isError = true;
+                    }
+                }
+                if (!isError) {
+                    if (body.get(SnakeCase.ORDER_NUMBER) instanceof Long) {
+                        code = null;
+                        message = ProductConstants.MessageCase.THE_VALUE_IS_TOO_HIGH;
+                        missingField = SnakeCase.ORDER_NUMBER;
+                    } else if (!(body.get(SnakeCase.ORDER_NUMBER) instanceof Integer)) {
+                        code = null;
+                        message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                        missingField = SnakeCase.ORDER_NUMBER;
+                    } else if (!(body.get(ProductConstants.SnakeCase.PRODUCT_ID) instanceof Long)) {
+                        code = null;
+                        message = ProductConstants.MessageCase.THE_VALUE_SHOULD_BE_AN_INTEGER;
+                        missingField = ProductConstants.SnakeCase.PRODUCT_ID;
+                    }
+                }
+                if (!isError) {
                     isSuccess = Boolean.TRUE;
                 }
             }

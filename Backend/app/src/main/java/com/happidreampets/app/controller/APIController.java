@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.happidreampets.app.constants.ProductConstants;
+import com.happidreampets.app.constants.PromotionsConstants;
 import com.happidreampets.app.constants.SizeVariantConstants;
 import com.happidreampets.app.constants.UserConstants;
 import com.happidreampets.app.constants.WeightVariantConstants;
@@ -38,6 +40,7 @@ import com.happidreampets.app.database.crud.CategoryCRUD;
 import com.happidreampets.app.database.crud.ColorVariantCRUD;
 import com.happidreampets.app.database.crud.OrderHistoryCRUD;
 import com.happidreampets.app.database.crud.ProductCRUD;
+import com.happidreampets.app.database.crud.PromotionsCRUD;
 import com.happidreampets.app.database.crud.SizeVariantCRUD;
 import com.happidreampets.app.database.crud.TopCategoriesCRUD;
 import com.happidreampets.app.database.crud.TopProductsCRUD;
@@ -46,6 +49,7 @@ import com.happidreampets.app.database.crud.UserCRUD;
 import com.happidreampets.app.database.crud.WeightVariantCRUD;
 import com.happidreampets.app.database.model.User;
 import com.happidreampets.app.database.model.Product.PRODUCTCOLUMN;
+import com.happidreampets.app.database.model.Product.VARIANT_TYPE;
 import com.happidreampets.app.constants.ControllerConstants.LoggerCase;
 import com.happidreampets.app.constants.ControllerConstants.LowerCase;
 import com.happidreampets.app.constants.ControllerConstants.MessageCase;
@@ -141,6 +145,9 @@ public class APIController {
     @Autowired
     private WeightVariantCRUD weighVariantCRUD;
 
+    @Autowired
+    private PromotionsCRUD promotionsCRUD;
+
     private User currentUser;
 
     private Boolean isGuestUser;
@@ -205,6 +212,10 @@ public class APIController {
 
     protected TopProductsCRUD getTopProductsCRUD() {
         return topProductsCRUD;
+    }
+
+    protected PromotionsCRUD getPromotionsCRUD() {
+        return promotionsCRUD;
     }
 
     protected UserCRUD getUserCRUD() {
@@ -593,6 +604,16 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "Weight Variant Relation Already Exists With other product"));
                     return failureResponse.throwInvalidBodyInput();
+                case WeightVariantConstants.ExceptionMessageCase.NO_WEIGHT_DATA_PRESENT_IN_THE_PRODUCT:
+                    failureResponse.setApiResponseStatus(HttpStatus.FORBIDDEN);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "No Weight Data present in the current product"));
+                    return failureResponse.throwInvalidPathVariable();
                 case SizeVariantConstants.ExceptionMessageCase.ALREADY_SIZE_VARIANT_ADDED:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse
@@ -613,6 +634,16 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "Size Variant Relation Already Exists With other product"));
                     return failureResponse.throwInvalidBodyInput();
+                case SizeVariantConstants.ExceptionMessageCase.NO_SIZE_DATA_PRESENT_IN_THE_PRODUCT:
+                    failureResponse.setApiResponseStatus(HttpStatus.FORBIDDEN);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "No Size Data present in the current product"));
+                    return failureResponse.throwInvalidPathVariable();
                 case ColorVariantConstants.ExceptionMessageCase.ALREADY_COLOR_VARIANT_ADDED:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse
@@ -633,6 +664,16 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "Color Variant Relation Already Exists With other product"));
                     return failureResponse.throwInvalidBodyInput();
+                case ColorVariantConstants.ExceptionMessageCase.NO_COLOR_DATA_PRESENT_IN_THE_PRODUCT:
+                    failureResponse.setApiResponseStatus(HttpStatus.FORBIDDEN);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    ProductConstants.SnakeCase.PRODUCT_ID)
+                                            .put(LowerCase.MESSAGE,
+                                                    "No Color Data present in the current product"));
+                    return failureResponse.throwInvalidPathVariable();
                 case ProductConstants.ExceptionMessageCase.VARIANT_NOT_PRESENT:
                     failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
                     failureResponse
@@ -643,6 +684,21 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "No Given Variant has been associated with other product"));
                     return failureResponse.throwInvalidBodyInput();
+                case ProductConstants.ExceptionMessageCase.INVALID_VARIANT_TYPE:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(
+                                    new JSONObject().put(LowerCase.ERRORS,
+                                            new JSONArray().put(
+                                                    new JSONObject().put(ProductConstants.LowerCase.FIELD,
+                                                            ProductConstants.SnakeCase.VARIANT_TYPE)
+                                                            .put(LowerCase.MESSAGE,
+                                                                    "No Given Variant has been associated with other product"))
+                                                    .put(new JSONObject().put(SnakeCase.ALLOWED_VALUES,
+                                                            VARIANT_TYPE.getAllValuesForAPI())
+
+                                                    )));
+                    return failureResponse.throwInvalidInput();
                 case ExceptionMessageCase.INTERNAL_SERVER_ERROR:
                     return failureResponse.getResponse();
                 default:
@@ -875,6 +931,22 @@ public class APIController {
                                             .put(LowerCase.MESSAGE,
                                                     "No Images have been associated to this Category"));
                     return failureResponse.throwInvalidBodyInput();
+                case PromotionsConstants.MessageCase.PROMOTIONS_LIMIT_REACHED:
+                    failureResponse.setApiResponseStatus(HttpStatus.BAD_REQUEST);
+                    failureResponse
+                            .setData(
+                                    new JSONObject()
+                                            .put(ProductConstants.LowerCase.FIELD,
+                                                    PromotionsConstants.LowerCase.PROMOTIONS)
+                                            .put(LowerCase.MESSAGE,
+                                                    "Maximum Number of Promotions that can be created has been Reached"));
+                    return failureResponse.throwMaximumResourceCreated();
+                case PromotionsConstants.ExceptionMessageCase.PROMOTION_NOT_FOUND:
+                    failureResponse.setApiResponseStatus(HttpStatus.NOT_FOUND);
+                    failureResponse.setData(new JSONObject()
+                            .put(ProductConstants.LowerCase.FIELD, PromotionsConstants.LowerCase.PROMOTIONS)
+                            .put(LowerCase.MESSAGE, "Promotion Id is Invalid"));
+                    return failureResponse.throwNotFoundForIds();
                 case ExceptionMessageCase.INTERNAL_SERVER_ERROR:
                     return failureResponse.getResponse();
                 default:

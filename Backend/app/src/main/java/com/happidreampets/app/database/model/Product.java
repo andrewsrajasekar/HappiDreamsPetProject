@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.json.JSONObject;
 
+import com.happidreampets.app.constants.ProductConstants;
 import com.happidreampets.app.database.utils.ProductImageConverter;
 import com.happidreampets.app.database.utils.WeightUnitConverter;
 
@@ -41,6 +42,15 @@ public class Product {
             return this.unit;
         }
 
+        public static WEIGHT_UNITS getEnumValueFromGivenString(String value) {
+            for (WEIGHT_UNITS enumValue : values()) {
+                if (enumValue.name().equalsIgnoreCase(value)) {
+                    return enumValue;
+                }
+            }
+            return null;
+        }
+
     }
 
     public enum VARIANT_TYPE {
@@ -55,6 +65,14 @@ public class Product {
                 }
             }
             return null;
+        }
+
+        public static List<String> getAllValuesForAPI() {
+            List<String> values = new ArrayList<>();
+            for (VARIANT_TYPE enumValue : values()) {
+                values.add(enumValue.name().toLowerCase());
+            }
+            return values;
         }
     }
 
@@ -389,7 +407,11 @@ public class Product {
 
     public JSONObject toJSON(Boolean isSystemDataExcluded, Boolean isComplexImageFieldExcluded) {
         JSONObject data = new JSONObject(this);
-
+        if ((this.getWeight() == null || this.getWeightUnits() == null)
+                || (this.getWeight() < 0 && this.getWeightUnits().equals(WEIGHT_UNITS.NONE))) {
+            data.remove(ProductConstants.LowerCase.WEIGHT);
+            data.remove(ProductConstants.CamelCase.WEIGHTUNITS);
+        }
         if (isSystemDataExcluded) {
             for (String field : getSystemFields()) {
                 if (data.has(field)) {
